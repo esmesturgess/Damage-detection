@@ -1,8 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Map, GeoJSONSource, setWorkerUrl, type MapLayerMouseEvent, type MapMouseEvent } from "maplibre-gl";
+import {
+  Map,
+  GeoJSONSource,
+  setWorkerUrl,
+  type MapLayerMouseEvent,
+  type MapMouseEvent,
+  type StyleSpecification,
+} from "maplibre-gl";
 import { LEVELS, type Level, type Reviewer, type Site } from "@/lib/types";
+import AreaLayers, { AREA_LAYERS, type AreaLayerId, type Analysis } from "./AreaLayers";
 import LocationPanel from "./LocationPanel";
 import TimeBar, { label, monthIndex, windows } from "./TimeBar";
 
@@ -13,6 +21,41 @@ setWorkerUrl("/maplibre-gl-worker.mjs");
 const RAKHINE: [number, number] = [93.8, 20.8];
 const API_DOWN = "API unreachable. Start uvicorn on :8000.";
 const LEVEL_COLOR = Object.fromEntries(LEVELS.map((l) => [l.id, l.color])) as Record<Level, string>;
+const SITE_BOX_KM = 3;
+
+// Globe: EOX Sentinel-2 cloudless 2016 (CC BY 4.0; later years need a
+// subscription), under Carto's keyless vector labels and borders. Imagery
+// for the selected dates comes from Earth Engine, only for an analysed area.
+const CARTO_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const EOX_2016 = "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg";
+const LABELS_ANCHOR = "labels-anchor";
+
+function withImagery(carto: StyleSpecification): StyleSpecification {
+  const overlays = carto.layers.filter(
+    (l) => l.type === "symbol" || (l.type === "line" && l.id.includes("boundary")),
+  );
+  return {
+    ...carto,
+    sources: {
+      ...carto.sources,
+      eox: {
+        type: "raster",
+        tiles: [EOX_2016],
+        tileSize: 256,
+        maxzoom: 15,
+        attribution:
+          '<a href="https://s2maps.eu">Sentinel-2 cloudless 2016</a> by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2016)',
+      },
+    },
+    layers: [
+      { id: "background", type: "background", paint: { "background-color": "#050506" } },
+      { id: "eox", type: "raster", source: "eox" },
+      // Empty marker layer: area imagery is inserted below it, so labels stay on top.
+      { id: LABELS_ANCHOR, type: "background", paint: { "background-opacity": 0 } },
+      ...overlays,
+    ],
+  };
+}
 
 async function fetchSites(): Promise<Site[]> {
   const res = await fetch("/api/sites");
@@ -60,9 +103,19 @@ export default function MapApp() {
   const [probeMsg, setProbeMsg] = useState("");
   const [handle, setHandle] = useState("");
   const [reviewer, setReviewer] = useState<Reviewer>({ name: "", token: "", enabled: false });
+  const [analysis, setAnalysis] = useState<Analysis>({ status: "idle" });
+  const [layerOn, setLayerOn] = useState<Record<AreaLayerId, boolean>>({
+    before: false,
+    after: true,
+    burn: false,
+    change: true,
+  });
+  const [opacity, setOpacity] = useState(0.85);
+  const shownLayers = useRef<Partial<Record<AreaLayerId, string>>>({});
 
   const selected = sites.find((s) => s.id === selectedId) ?? null;
   const win = windows(range[0], range[1]);
+  const winKey = JSON.stringify(win);
 
   const loadSites = useCallback(async () => {
     try {
@@ -91,71 +144,83 @@ export default function MapApp() {
   }, []);
 
   useEffect(() => {
-    if (!container.current || mapRef.current) return;
-    const map = new Map({
-      container: container.current,
-      style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-      center: RAKHINE,
-      zoom: 4.6,
-      attributionControl: { compact: true },
-    });
-    mapRef.current = map;
-    map.on("load", () => {
-      try {
-        map.setProjection({ type: "globe" });
-      } catch {
-        /* older maplibre */
-      }
-      map.addSource("sites", { type: "geojson", data: emptyFc() });
-      map.addSource("aoi", { type: "geojson", data: emptyFc() });
-      map.addLayer({
-        id: "aoi-fill",
-        type: "fill",
-        source: "aoi",
-        paint: { "fill-color": "#d4ff4a", "fill-opacity": 0.08 },
-      });
-      map.addLayer({
-        id: "aoi-line",
-        type: "line",
-        source: "aoi",
-        paint: { "line-color": "#d4ff4a", "line-width": 1.2, "line-dasharray": [2, 1] },
-      });
-      // One circle per location, coloured by verification level. Detected is
-      // an outline only: a machine signal, not a claim.
-      map.addLayer({
-        id: "locations",
-        type: "circle",
-        source: "sites",
-        paint: {
-          "circle-radius": ["match", ["get", "level"], "verified", 8, "detected", 5, 7],
-          "circle-color": [
-            "match",
-            ["get", "level"],
-            "detected",
-            "rgba(0,0,0,0)",
-            ["get", "color"],
-          ],
-          "circle-stroke-width": ["match", ["get", "level"], "detected", 1.5, "disputed", 2.5, 1],
-          "circle-stroke-color": [
-            "match",
-            ["get", "level"],
-            "detected",
-            LEVEL_COLOR.detected,
-            "disputed",
-            LEVEL_COLOR.explained,
-            "#050506",
-          ],
-        },
-      });
-      map.on("mouseenter", "locations", () => (map.getCanvas().style.cursor = "pointer"));
-      map.on("mouseleave", "locations", () => (map.getCanvas().style.cursor = ""));
-      // Sites usually arrive before the style finishes loading; effects below
-      // wait on this so the data and handlers land on layers that exist.
-      setMapReady(true);
-    });
+    let cancelled = false;
+    let created: Map | null = null;
+    // Fetch Carto's style first so the map starts with the final style; a
+    // style swap after load would wipe the layers added below.
+    fetch(CARTO_STYLE)
+      .then((res) => res.json() as Promise<StyleSpecification>)
+      .then((carto) => {
+        if (cancelled || !container.current) return;
+        const map = new Map({
+          container: container.current,
+          style: withImagery(carto),
+          center: RAKHINE,
+          zoom: 4.6,
+          attributionControl: { compact: true },
+        });
+        created = map;
+        mapRef.current = map;
+        map.on("load", () => {
+          try {
+            map.setProjection({ type: "globe" });
+          } catch {
+            /* older maplibre */
+          }
+          map.addSource("sites", { type: "geojson", data: emptyFc() });
+          map.addSource("aoi", { type: "geojson", data: emptyFc() });
+          map.addLayer({
+            id: "aoi-fill",
+            type: "fill",
+            source: "aoi",
+            paint: { "fill-color": "#d4ff4a", "fill-opacity": 0.08 },
+          });
+          map.addLayer({
+            id: "aoi-line",
+            type: "line",
+            source: "aoi",
+            paint: { "line-color": "#d4ff4a", "line-width": 1.2, "line-dasharray": [2, 1] },
+          });
+          // One circle per location, coloured by verification level. Detected is
+          // an outline only: a machine signal, not a claim.
+          map.addLayer({
+            id: "locations",
+            type: "circle",
+            source: "sites",
+            paint: {
+              "circle-radius": ["match", ["get", "level"], "verified", 8, "detected", 5, 7],
+              "circle-color": [
+                "match",
+                ["get", "level"],
+                "detected",
+                "rgba(0,0,0,0)",
+                ["get", "color"],
+              ],
+              "circle-stroke-width": ["match", ["get", "level"], "detected", 1.5, "disputed", 2.5, 1],
+              "circle-stroke-color": [
+                "match",
+                ["get", "level"],
+                "detected",
+                LEVEL_COLOR.detected,
+                "disputed",
+                LEVEL_COLOR.explained,
+                "#050506",
+              ],
+            },
+          });
+          map.on("mouseenter", "locations", () => (map.getCanvas().style.cursor = "pointer"));
+          map.on("mouseleave", "locations", () => (map.getCanvas().style.cursor = ""));
+          // Sites usually arrive before the style finishes loading; effects below
+          // wait on this so the data and handlers land on layers that exist.
+          setMapReady(true);
+        });
+
+      })
+      .catch(() => setError("Couldn't load the base map."));
 
     return () => {
-      map.remove();
+      cancelled = true;
+      created?.remove();
       mapRef.current = null;
       setMapReady(false);
     };
@@ -165,8 +230,12 @@ export default function MapApp() {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const handler = (ev: MapLayerMouseEvent) => {
-      const id = ev.features?.[0]?.properties?.id as string | undefined;
-      if (id) setSelectedId(id);
+      const feature = ev.features?.[0];
+      const id = feature?.properties?.id as string | undefined;
+      if (!id || feature?.geometry.type !== "Point") return;
+      setSelectedId(id);
+      const [lon, lat] = feature.geometry.coordinates;
+      setAoi(boxAround(lat, lon, SITE_BOX_KM));
     };
     map.on("click", "locations", handler);
     return () => {
@@ -198,6 +267,58 @@ export default function MapApp() {
         : emptyFc(),
     );
   }, [aoi, mapReady]);
+
+  // Earth Engine layers for the analysed area, refetched when the area or
+  // the time window changes (debounced so dragging the time bar is cheap).
+  useEffect(() => {
+    if (!aoi) return;
+    const w = JSON.parse(winKey) as ReturnType<typeof windows>;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setAnalysis({ status: "loading" });
+      try {
+        const res = await fetch("/api/imagery/analysis", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ aoi_geojson: aoi, baseline_window: w.baseline, event_window: w.event }),
+        });
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok) setAnalysis({ status: "error", error: data.detail ?? "Couldn't load layers." });
+        else setAnalysis({ status: "ready", data });
+      } catch {
+        if (!cancelled) setAnalysis({ status: "error", error: API_DOWN });
+      }
+    }, 700);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [aoi, winKey]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const urls = analysis.status === "ready" && aoi ? analysis.data.layers : {};
+    // Bottom to top, all beneath the place-name labels.
+    for (const id of AREA_LAYERS) {
+      const layerId = `area-${id}`;
+      const url = urls[id]?.url;
+      if (shownLayers.current[id] !== url) {
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+        if (map.getSource(layerId)) map.removeSource(layerId);
+        if (url) {
+          map.addSource(layerId, { type: "raster", tiles: [url], tileSize: 256 });
+          map.addLayer({ id: layerId, type: "raster", source: layerId }, LABELS_ANCHOR);
+        }
+        shownLayers.current[id] = url;
+      }
+      if (map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, "visibility", layerOn[id] ? "visible" : "none");
+        map.setPaintProperty(layerId, "raster-opacity", opacity);
+      }
+    }
+  }, [analysis, aoi, layerOn, opacity, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -355,6 +476,22 @@ export default function MapApp() {
           {probeMsg ? <p className="mt-2 text-[10px] leading-4 text-[#b8b6aa]">{probeMsg}</p> : null}
           {error ? <p className="mt-2 text-[10px] text-[#ff4d2e]">{error}</p> : null}
         </Section>
+
+        {aoi ? (
+          <Section title="Area layers">
+            <AreaLayers
+              analysis={analysis}
+              on={layerOn}
+              opacity={opacity}
+              onToggle={(id, value) => setLayerOn((prev) => ({ ...prev, [id]: value }))}
+              onOpacity={setOpacity}
+              onClear={() => {
+                setAoi(null);
+                setAnalysis({ status: "idle" });
+              }}
+            />
+          </Section>
+        ) : null}
 
         <Section title="Map">
           {LEVELS.map((l) => (

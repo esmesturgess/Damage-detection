@@ -106,3 +106,22 @@ def test_seismic_reach_scales_with_magnitude():
     assert _within_reach({"magnitude": 7.7, "distance_km": 500.0})
     assert not _within_reach({"magnitude": 7.7, "distance_km": 900.0})
     assert _within_reach({"error": "fdsn_unavailable"})
+
+
+def test_imagery_needs_earth_engine(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from api.main import app
+    from core import config
+
+    monkeypatch.setattr(config.settings, "enable_live_gee", False)
+    box = {"type": "Polygon", "coordinates": [[[92.3, 20.8], [92.4, 20.8], [92.4, 20.9], [92.3, 20.9], [92.3, 20.8]]]}
+    res = TestClient(app).post(
+        "/imagery/analysis",
+        json={
+            "aoi_geojson": box,
+            "baseline_window": {"start": "2016-08-01", "end": "2017-07-31"},
+            "event_window": {"start": "2017-08-01", "end": "2017-09-30"},
+        },
+    )
+    assert res.status_code == 503

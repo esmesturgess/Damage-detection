@@ -11,6 +11,8 @@ from core.bundle import get_evidence_bundle
 from core.burn import classify_burn
 from core.config import settings
 from core.coverage import check_coverage
+from core.gee import GeeUnavailable
+from core.imagery import analysis_layers
 from core.db import init_db, row_to_dict, session
 from core.evidence import (
     EvidenceError,
@@ -119,6 +121,25 @@ def coverage_get(start_date: str, end_date: str, aoi: str) -> dict[str, Any]:
 @app.post("/coverage")
 def coverage_post(body: CoverageIn) -> dict[str, Any]:
     return check_coverage(body.aoi_geojson, body.start_date, body.end_date)
+
+
+class AnalysisIn(BaseModel):
+    aoi_geojson: dict[str, Any]
+    baseline_window: dict[str, str]
+    event_window: dict[str, str]
+
+
+@app.post("/imagery/analysis")
+def imagery_analysis(body: AnalysisIn) -> dict[str, Any]:
+    """Earth Engine tile layers (change, burn, before, after) for one area."""
+    try:
+        return analysis_layers(body.aoi_geojson, body.baseline_window, body.event_window)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except GeeUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:  # Earth Engine computation errors
+        raise HTTPException(status_code=502, detail=f"Earth Engine error: {exc}") from exc
 
 
 @app.post("/jobs")

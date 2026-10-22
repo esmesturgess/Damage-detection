@@ -11,10 +11,11 @@ See [`DESIGN.md`](DESIGN.md) for the full design.
 | Part | State |
 |---|---|
 | Map, time bar, area probe (box or coordinates) | Working |
+| Area layers from Earth Engine: radar change (PWTT), burn signal (dNBR), before/after true colour for the selected dates | Working with Earth Engine credentials |
 | Verification levels, evidence (links, testimony), reviewer checks, agreement | Working |
 | Seismic check (USGS FDSN + ShakeMap intensity at the site) | Working on live data |
 | Earth Engine coverage check | Working with credentials; per-orbit breakdown to build |
-| PWTT change detection worker | Not built yet: scans are queued but not run |
+| PWTT scan worker (turning change into stored detections) | Not built yet: scans are queued but not run |
 | Burn indices from Sentinel-2 | Not built yet |
 | Burn classifier (LightGBM) | Inference code only; under evaluation against a single-index rule |
 
@@ -112,4 +113,4 @@ pytest
 
 ## Acknowledgements
 
-Pixel-Wise T-Test by Ollie Ballinger. Earthquake data from the USGS. Basemap © OpenStreetMap contributors, © CARTO.
+Pixel-Wise T-Test by Ollie Ballinger (MIT), vendored in `core/_vendor/pwtt` with robustness fixes by Imogen Dexter. Earthquake data from the USGS. Globe imagery: Sentinel-2 cloudless 2016 by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2016). Labels © OpenStreetMap contributors, © CARTO.
