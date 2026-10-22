@@ -403,11 +403,28 @@ export default function MapApp() {
       body: JSON.stringify({ aoi_geojson: aoi, baseline_window: win.baseline, event_window: win.event, z_threshold: 3.0 }),
     });
     const data = await res.json();
-    setProbeMsg(
-      data.job_id
-        ? `Scan queued for ${label(range[0])} → ${label(range[1])}. Live scanning lands with the PWTT worker; demo locations are already on the map.`
-        : (data.detail ?? "Scan failed."),
-    );
+    if (!data.job_id) return setProbeMsg(data.detail ?? "Scan failed.");
+    const period = `${label(range[0])} → ${label(range[1])}`;
+    setProbeMsg(`Scanning ${period} in Earth Engine… usually under a minute.`);
+
+    // The worker runs the scan; poll until it finishes (identical scans reuse the earlier job).
+    for (let i = 0; i < 120; i++) {
+      const job = await fetch(`/api/jobs/${data.job_id}`).then((r) => r.json());
+      if (job.status === "succeeded") {
+        const r = job.result ?? {};
+        const extra = r.hotspots_found > r.sites_created ? ` (largest ${r.sites_created} kept)` : "";
+        setProbeMsg(
+          `${period}: ${r.hotspots_found} change hot-spot${r.hotspots_found === 1 ? "" : "s"}${extra}, added as unreviewed detections.` +
+            (r.notes?.length ? " " + r.notes.join(" ") : ""),
+        );
+        setShowDetected(true);
+        return loadSites();
+      }
+      if (job.status === "failed") return setProbeMsg(`Scan failed: ${job.error}`);
+      if (i === 2 && job.status === "queued") setProbeMsg(`Waiting for the worker… is \`python -m api.worker\` running?`);
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+    setProbeMsg("The scan is taking a long time. It keeps running; check back shortly.");
   }
 
   const counts = useMemo(() => {

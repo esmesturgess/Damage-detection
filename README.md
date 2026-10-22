@@ -15,8 +15,7 @@ See [`DESIGN.md`](DESIGN.md) for the full design.
 | Verification levels, evidence (links, testimony), reviewer checks, agreement | Working |
 | Seismic check (USGS FDSN + ShakeMap intensity at the site) | Working on live data |
 | Earth Engine coverage check | Working with credentials; per-orbit breakdown to build |
-| PWTT scan worker (turning change into stored detections) | Not built yet: scans are queued but not run |
-| Burn indices from Sentinel-2 | Not built yet |
+| Scan worker: PWTT hot-spots saved as Detected locations, with the four burn features and radar/optical provenance | Working with Earth Engine (areas up to 400 km²); run `python -m api.worker` |
 | Burn classifier (LightGBM) | Inference code only; under evaluation against a single-index rule |
 
 Locations on the map are synthetic demo data, labelled as such.

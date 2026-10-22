@@ -125,3 +125,31 @@ def test_imagery_needs_earth_engine(monkeypatch):
         },
     )
     assert res.status_code == 503
+
+
+def test_identical_scans_reuse_the_job(tmp_path):
+    from core import config
+    from core.db import connect, init_db
+    from core.pwtt import screen_for_change
+
+    config.settings.database_path = tmp_path / "t.db"
+    conn = connect()
+    init_db(conn)
+    conn.close()
+    box = {"type": "Polygon", "coordinates": [[[92.36, 20.80], [92.40, 20.80], [92.40, 20.84], [92.36, 20.84], [92.36, 20.80]]]}
+    windows = ({"start": "2016-08-01", "end": "2017-07-31"}, {"start": "2017-08-01", "end": "2017-09-30"})
+    first = screen_for_change(box, *windows)
+    assert screen_for_change(box, *windows) == first
+    assert screen_for_change(box, windows[0], {"start": "2017-08-01", "end": "2017-10-31"}) != first
+
+
+def test_scan_area_is_capped(tmp_path):
+    import pytest
+
+    from core import config
+    from core.pwtt import screen_for_change
+
+    config.settings.database_path = tmp_path / "t.db"
+    big = {"type": "Polygon", "coordinates": [[[92.0, 20.0], [92.3, 20.0], [92.3, 20.3], [92.0, 20.3], [92.0, 20.0]]]}  # ~1,000 km²
+    with pytest.raises(ValueError, match="limited"):
+        screen_for_change(big, {"start": "2016-08-01", "end": "2017-07-31"}, {"start": "2017-08-01", "end": "2017-09-30"})

@@ -72,10 +72,10 @@ def _build(aoi: dict[str, Any], baseline: dict[str, str], event: dict[str, str])
     # Optical: same product on both sides, L2A preferred (the burn detector's
     # training data), L1C where Earth Engine's L2A archive has gaps.
     post_end = ev_end
-    optical = _pick_product(region, baseline["start"], baseline["end"], event["start"], post_end.isoformat())
+    optical = pick_product(region, baseline["start"], baseline["end"], event["start"], post_end.isoformat())
     if optical is None:
         post_end = ev_end + timedelta(days=POST_EXTENSION_DAYS)
-        optical = _pick_product(region, baseline["start"], baseline["end"], event["start"], post_end.isoformat())
+        optical = pick_product(region, baseline["start"], baseline["end"], event["start"], post_end.isoformat())
         if optical:
             notes.append(f"No clear Sentinel-2 scene in the window; after-imagery extended to {post_end}.")
 
@@ -84,8 +84,8 @@ def _build(aoi: dict[str, Any], baseline: dict[str, str], event: dict[str, str])
         optical_info = {"product": None, "provisional": True}
     else:
         product, pre_n, post_n = optical
-        pre = _clear(product, region, baseline["start"], baseline["end"]).median().clip(region)
-        post = _clear(product, region, event["start"], post_end.isoformat()).median().clip(region)
+        pre = clear_scenes(product, region, baseline["start"], baseline["end"]).median().clip(region)
+        post = clear_scenes(product, region, event["start"], post_end.isoformat()).median().clip(region)
         layers["before"] = _tiles(pre, TRUE_COLOUR)
         layers["after"] = _tiles(post, TRUE_COLOUR)
         dnbr = pre.normalizedDifference(["B8", "B12"]).subtract(post.normalizedDifference(["B8", "B12"]))
@@ -104,7 +104,7 @@ def _build(aoi: dict[str, Any], baseline: dict[str, str], event: dict[str, str])
     return {"layers": layers, "optical": optical_info, "notes": notes}
 
 
-def _clear(collection: str, region, start: str, end: str):
+def clear_scenes(collection: str, region, start: str, end: str):
     """Sentinel-2 scenes over the region with cloudy pixels masked (s2cloudless)."""
     import ee
 
@@ -123,13 +123,13 @@ def _clear(collection: str, region, start: str, end: str):
     )
 
 
-def _pick_product(region, pre_start: str, pre_end: str, post_start: str, post_end: str):
+def pick_product(region, pre_start: str, pre_end: str, post_start: str, post_end: str):
     import ee
 
     for product in (L2A, L1C):
         counts = ee.List([
-            _clear(product, region, pre_start, pre_end).size(),
-            _clear(product, region, post_start, post_end).size(),
+            clear_scenes(product, region, pre_start, pre_end).size(),
+            clear_scenes(product, region, post_start, post_end).size(),
         ]).getInfo()
         if counts[0] and counts[1]:
             return product, counts[0], counts[1]

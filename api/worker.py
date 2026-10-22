@@ -6,7 +6,8 @@ import json
 import time
 
 from core.db import audit, init_db, session, utcnow
-from core.gee import GeeUnavailable, gee_enabled, initialize
+from core.gee import GeeUnavailable, gee_enabled
+from core.pwtt import run_scan
 from core.seed import seed_demo
 
 
@@ -34,7 +35,7 @@ def run_job(job_id: str) -> None:
 
     try:
         if kind == "screen_for_change":
-            result = _run_pwtt(params)
+            result = _run_pwtt(job_id, params)
         else:
             raise RuntimeError(f"unknown job kind {kind}")
         with session() as conn:
@@ -52,20 +53,13 @@ def run_job(job_id: str) -> None:
             audit(conn, "worker", "job_failed", "job", job_id, {"error": str(exc)})
 
 
-def _run_pwtt(params: dict) -> dict:
+def _run_pwtt(job_id: str, params: dict) -> dict:
     if not gee_enabled():
         raise GeeUnavailable(
             "PWTT needs Earth Engine. Demo detections are pre-seeded in SQLite. "
-            "Set ENABLE_LIVE_GEE=true and GEE_SERVICE_ACCOUNT_JSON for a live run."
+            "Set ENABLE_LIVE_GEE=true and GEE_PROJECT for a live run."
         )
-    initialize()
-    # Tiling + Export.image.toCloudStorage belongs here for large AOIs.
-    # Interactive getInfo on a large AOI is how these projects stall.
-    return {
-        "status": "not_implemented_live",
-        "note": "GEE is authenticated; tiled PWTT export is the next worker increment.",
-        "params": params,
-    }
+    return run_scan(job_id, params)
 
 
 def loop(poll_seconds: float = 2.0) -> None:
