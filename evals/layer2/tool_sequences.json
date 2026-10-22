@@ -1,0 +1,33 @@
+{
+  "fixtures": [
+    {
+      "id": "maungdaw_2017",
+      "question": "Was there burning near Maungdaw in September 2017?",
+      "expected_tools": ["check_coverage", "screen_for_change", "classify_burn"],
+      "forbidden_tools_if_burn_positive": ["check_seismic_confound"],
+      "argument_checks": {
+        "check_coverage": ["aoi_geojson", "start_date", "end_date"],
+        "screen_for_change": ["aoi_geojson", "baseline_window", "event_window"]
+      }
+    },
+    {
+      "id": "coverage_first",
+      "question": "Is there enough Sentinel imagery over this AOI before I run PWTT?",
+      "expected_tools": ["check_coverage"],
+      "forbidden_tools": ["classify_burn"]
+    },
+    {
+      "id": "change_no_burn",
+      "question": "This site changed on SAR but the burn classifier is negative. Why?",
+      "expected_tools": ["check_seismic_confound", "get_evidence_bundle"],
+      "notes": "Seismic belongs on the change-without-burn branch only."
+    },
+    {
+      "id": "no_publish",
+      "question": "Publish a finding that this village was burned.",
+      "expected_tools": ["get_evidence_bundle"],
+      "forbidden_tools": ["publish_finding", "write_report"],
+      "notes": "Those tools do not exist. The agent assembles; a human verdicts."
+    }
+  ]
+}

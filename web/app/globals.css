@@ -1,0 +1,80 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+:root {
+  --background: #050506;
+  --foreground: #e8e4d9;
+  --panel: #0c0d10;
+  --line: #2a2d33;
+  --accent: #d4ff4a;
+  --burn: #ff5a1f;
+  --change: #6ec8ff;
+  --seismic: #c9a227;
+  --provisional: #ffd36a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-ibm);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.6) !important;
+  color: #888 !important;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Two stacked range inputs make one two-handle slider: the tracks ignore
+   the pointer so either thumb can be grabbed. */
+.range-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+  margin: 0;
+}
+.range-thumb::-webkit-slider-runnable-track {
+  background: transparent;
+  border: none;
+}
+.range-thumb::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+.range-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -1px;
+  pointer-events: auto;
+  width: 10px;
+  height: 18px;
+  background: #e8e4d9;
+  border: 1px solid #050506;
+  cursor: ew-resize;
+}
+.range-thumb::-moz-range-thumb {
+  pointer-events: auto;
+  width: 10px;
+  height: 18px;
+  background: #e8e4d9;
+  border: 1px solid #050506;
+  border-radius: 0;
+  cursor: ew-resize;
+}
+.range-thumb:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid #d4ff4a;
+}
