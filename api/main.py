@@ -64,7 +64,7 @@ class ScreenIn(BaseModel):
 
 class ClassifyIn(BaseModel):
     site_ids: list[str]
-    threshold: float = 0.397
+    threshold: float | None = None
 
 
 class SeismicIn(BaseModel):

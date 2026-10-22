@@ -76,18 +76,31 @@ Use Ollie Ballinger's open-source `pwtt` package as a dependency rather than a r
 
 ### 5.3 Burn indices
 
-Computed from Sentinel-2 SR for every scan with an optical read: dNBR (B8/B12) percentiles and threshold fractions, NBR2 change, dNDVI. These match the ADS feature definitions (`dnbr_b8_p95`, `dnbr_b8_frac_gt_0_10`, `dnbr_b8_frac_gt_0_27`, `dnbr_b8_top_5pct_mean`, `delta_nbr2_p95`, optionally `dndvi_p95`, `dndvi_top_5pct_mean`). Under cloud the result says "no optical read" rather than nothing.
+The four features of the published burn detector (ADS paper, §V), computed for every scan with an optical read:
+
+| Feature | Definition |
+|---|---|
+| `mean_dnbr` | mean of dNBR = NBR(pre) − NBR(post), NBR = (B8 − B12) / (B8 + B12) |
+| `p95_dnbr` | 95th percentile of dNBR |
+| `nbr2_change` | 95th percentile of NBR2 change, NBR2 = (B11 − B12) / (B11 + B12) |
+| `stable_water_fraction` | share of pixels with MNDWI = (B3 − B11) / (B3 + B11) > 0.12 on both dates |
+
+**Product.** The detector was trained on Sentinel-2 Level-2A surface reflectance (`S2_SR_HARMONIZED`). Earth Engine's L2A archive is patchy outside Europe before late 2018: over Maungdaw it has no scenes for August–September 2017, while Level-1C (`S2_HARMONIZED`) has six. Scans use L2A when available and fall back to L1C otherwise; an L1C reading is marked provisional, because the thresholds were learned on L2A values.
+
+**Windows.** Pre and post composites are medians of low-cloud scenes, preferring dry season to dry season so crop cycles and monsoon cloud don't swamp the signal. Under persistent cloud the result says "no optical read" rather than nothing.
 
 ### 5.4 LightGBM: keep or drop?
 
 Decided by experiment, not assumption. On the ADS held-out test set, compare:
 
-- LightGBM (5- and 7-feature variants), against
-- a single-feature rule, `dnbr_b8_p95 > t`, with `t` tuned on the same internal validation split.
+- the published LightGBM detector (four features above, threshold 0.91), against
+- a single-feature rule, `p95_dnbr > t`, with `t` tuned on the same validation split.
+
+The paper's Figure 6 already shows p95 dNBR separating burned from unburned pairs well, which is why this comparison is worth running.
 
 If the rule is within a couple of F1 points, drop the model: a public tool is easier to defend with an interpretable threshold. If LightGBM is clearly better, keep it as a ranking score shown beside the raw indices. Either way the raw indices are always displayed.
 
-The published figures need resolving first (⚑ section 14): the ADS repo shows test F1 0.714 (5 features, threshold 0.46) and 0.903 (7 features, threshold 0.71); 0.977 and 0.397 don't appear in it.
+Published figures (ADS paper, Table II): LightGBM F1 0.977, recall 0.955, precision 1.000 at threshold 0.91, evaluated on the burned subset only. The paper's 0.397 is the operating point of its Prithvi + ResNet Recall-Ensemble, not of the burn detector, and isn't used here. The five-feature scripts in the ADS repo are an earlier run, not the published model.
 
 ### 5.5 Seismic check (built)
 
@@ -258,7 +271,7 @@ Phases 1–4 make a complete working tool; 5–7 harden it for public use.
 | A | Does the public map show Detected locations? | **No**: Corroborated and above only | Unreviewed detections of atrocities on a public map invite misreading and misuse |
 | B | Who can be a reviewer? | **Invited** to start; earned reputation later | Earned reputation can be gamed; start small and trusted |
 | C | Uploads in v1, or links only? | **Links and text testimony only** in v1 | Avoids storing sensitive media and the moderation load until safety work (7) is done |
-| D | Where do F1 0.977 and threshold 0.397 come from? | **Unresolved** | ADS shows 0.714 / 0.46 and 0.903 / 0.71. Don't publish either number until confirmed |
+| D | ~~Where do F1 0.977 and threshold 0.397 come from?~~ | **Resolved** | ADS paper: 0.977 is LightGBM at threshold 0.91 (burned subset). 0.397 is the Recall-Ensemble's threshold, not the burn detector's |
 | E | `pwtt` package licence | **Check before adding** | Use as a dependency if permissive; otherwise reimplement from the paper |
 
 ---

@@ -2,8 +2,9 @@ from pathlib import Path
 
 from core.config import settings
 
-# Target metrics are set once the classifier is chosen (DESIGN.md §5.4).
-BURN_THRESHOLD = 0.397
+# Published LightGBM burn detector (ADS paper, Table II; burned subset only).
+LIGHTGBM_F1 = 0.977
+BURN_THRESHOLD = 0.91
 
 
 def test_threshold_is_recall_first():

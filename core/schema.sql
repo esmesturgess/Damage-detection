@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS sites (
     optical_read TEXT NOT NULL DEFAULT 'unknown',
     pwtt_z REAL,
     burn_probability REAL,
-    burn_threshold REAL NOT NULL DEFAULT 0.397,
+    burn_threshold REAL NOT NULL DEFAULT 0.91,
     features_json TEXT,
     seismic_json TEXT,
     scene_ids_json TEXT,

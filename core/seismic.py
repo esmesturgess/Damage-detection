@@ -13,6 +13,7 @@ from typing import Any
 
 import httpx
 
+from core.config import settings
 from core.db import audit, row_to_dict, session
 from core.geo import centroid_lonlat, parse_geometry
 
@@ -39,7 +40,7 @@ def check_seismic_confound(site_ids: list[str], window_days: int = 30) -> list[d
                 continue
 
             if site.get("burn_probability") is not None and site["burn_probability"] >= (
-                site.get("burn_threshold") or 0.397
+                site.get("burn_threshold") or settings.default_burn_threshold
             ):
                 payload = {
                     "site_id": site_id,

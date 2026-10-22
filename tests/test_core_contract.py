@@ -23,7 +23,7 @@ def test_seismic_skips_burn_positive(tmp_path, monkeypatch):
     seed_demo(conn)
     conn.commit()
     burn_id = conn.execute(
-        "SELECT id FROM sites WHERE burn_probability > 0.397 LIMIT 1"
+        "SELECT id FROM sites WHERE burn_probability >= burn_threshold LIMIT 1"
     ).fetchone()["id"]
     conn.close()
 

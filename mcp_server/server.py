@@ -49,7 +49,7 @@ def screen_for_change(
 
 
 @mcp.tool()
-def classify_burn(site_ids: list[str], threshold: float = 0.397) -> list[dict[str, Any]]:
+def classify_burn(site_ids: list[str], threshold: float | None = None) -> list[dict[str, Any]]:
     """LightGBM over spectral features. calibration_status is validated in Rakhine, provisional elsewhere."""
     return core_classify(site_ids, threshold)
 

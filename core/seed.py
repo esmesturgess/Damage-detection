@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 
+from core.config import settings
 from core.db import new_id, utcnow
 
 # Approximate Rakhine / northern corridor points for map orientation only.
@@ -18,7 +19,7 @@ DEMO_SITES = [
         "lat": 20.82,
         "region": "rakhine",
         "pwtt_z": 4.7,
-        "burn_probability": 0.91,
+        "burn_probability": 0.96,
         "optical_read": "available",
         "calibration_status": "validated",
         "features": {
@@ -56,7 +57,7 @@ DEMO_SITES = [
         "lat": 20.15,
         "region": "rakhine",
         "pwtt_z": 3.4,
-        "burn_probability": 0.74,
+        "burn_probability": 0.93,
         "optical_read": "available",
         "calibration_status": "validated",
         "features": {
@@ -125,7 +126,7 @@ def seed_demo(conn) -> int:
                 id, job_id, name, geometry_geojson, status, calibration_status,
                 optical_read, pwtt_z, burn_probability, burn_threshold,
                 features_json, scene_ids_json, timestamps_json, region, is_demo, created_at
-            ) VALUES (?, NULL, ?, ?, 'pending_review', ?, ?, ?, ?, 0.397, ?, ?, ?, ?, 1, ?)
+            ) VALUES (?, NULL, ?, ?, 'pending_review', ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
             """,
             (
                 sid,
@@ -135,6 +136,7 @@ def seed_demo(conn) -> int:
                 spec["optical_read"],
                 spec["pwtt_z"],
                 spec["burn_probability"],
+                settings.default_burn_threshold,
                 json.dumps(spec["features"]),
                 json.dumps(spec["scene_ids"]),
                 json.dumps(spec["timestamps"]),
