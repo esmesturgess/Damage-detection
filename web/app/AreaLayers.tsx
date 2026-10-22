@@ -35,29 +35,23 @@ export default function AreaLayers({
   opacity,
   onToggle,
   onOpacity,
-  onClear,
 }: {
   analysis: Analysis;
   on: Record<AreaLayerId, boolean>;
   opacity: number;
   onToggle: (id: AreaLayerId, value: boolean) => void;
   onOpacity: (v: number) => void;
-  onClear: () => void;
 }) {
   if (analysis.status === "idle" || analysis.status === "loading") {
     return (
-      <p className="text-[10px] leading-4 text-[#8a8d84]">
-        Computing layers in Earth Engine for this area and window…
+      <p className="muted flex items-center gap-2">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--accent)]" />
+        Loading imagery for these dates…
       </p>
     );
   }
   if (analysis.status === "error") {
-    return (
-      <div className="text-[10px] leading-4">
-        <p className="mb-2 text-[#ff4d2e]">{analysis.error}</p>
-        <ClearButton onClear={onClear} />
-      </div>
-    );
+    return <p className="text-[#ff6b4a]">{analysis.error}</p>;
   }
 
   const { layers, optical, notes } = analysis.data;
@@ -66,59 +60,64 @@ export default function AreaLayers({
     onToggle("before", v === "before");
     onToggle("after", v === "after");
   };
+  const scenes = (w?: Window, n?: number) => (w ? `${w.start} → ${w.end} · ${n} scenes` : "");
 
   return (
-    <div className="text-[10px] leading-4">
+    <div className="space-y-4">
       <LayerRow
-        title="Change (radar, PWTT)"
+        title="Radar change"
         on={on.change}
         disabled={!layers.change}
         onToggle={(v) => onToggle("change", v)}
+        ramp={CHANGE_RAMP}
+        rampLabels={["low", "strong"]}
       >
-        <Ramp gradient={CHANGE_RAMP} left="T 3" right="5+" />
-        Structural change in built-up areas. Not proof of damage: construction and flooding show too.
+        Change in built-up areas. Not proof of damage on its own.
       </LayerRow>
 
       <LayerRow
-        title="Burn signal (dNBR)"
+        title="Burn signal"
         on={on.burn}
         disabled={!layers.burn}
         onToggle={(v) => onToggle("burn", v)}
+        ramp={BURN_RAMP}
+        rampLabels={["low", "severe"]}
       >
-        <Ramp gradient={BURN_RAMP} left="low 0.1" right="high 0.66" />
         Vegetation and roof loss consistent with fire.
-        {optical.provisional && optical.product ? (
-          <span className="text-[#ffd36a]"> Level-1C imagery: provisional.</span>
-        ) : null}
+        {optical.provisional && optical.product ? <span className="text-[#ffd36a]"> Provisional imagery.</span> : null}
       </LayerRow>
 
-      <div className="mb-3">
-        <div className="mb-1 text-[11px]">True colour (Sentinel-2)</div>
-        <div className="mb-1 grid grid-cols-3 gap-1">
+      <div>
+        <div className="mb-1.5">Satellite photo</div>
+        <div className="seg">
           {(["off", "before", "after"] as const).map((v) => (
             <button
               key={v}
+              aria-pressed={trueColour === v}
               disabled={v !== "off" && !layers[v]}
-              className={`border px-1 py-0.5 disabled:opacity-30 ${trueColour === v ? "border-[#d4ff4a] text-[#d4ff4a]" : "border-[#2a2d33]"}`}
               onClick={() => setTrueColour(v)}
+              className="capitalize disabled:opacity-30"
             >
               {v}
             </button>
           ))}
         </div>
-        {optical.product ? (
-          <span className="text-[#8a8d84]">
-            before {optical.before_window?.start} → {optical.before_window?.end} ({optical.pre_scenes} scenes)
-            <br />
-            after {optical.after_window?.start} → {optical.after_window?.end} ({optical.post_scenes} scenes)
-          </span>
+        {trueColour !== "off" ? (
+          <p className="faint num mt-1 text-[11px]">
+            {trueColour === "before"
+              ? scenes(optical.before_window, optical.pre_scenes)
+              : scenes(optical.after_window, optical.post_scenes)}
+          </p>
         ) : null}
       </div>
 
-      <label className="mb-2 block">
-        <span className="text-[#8a8d84]">opacity</span>
+      <label className="block">
+        <div className="mb-1 flex justify-between">
+          <span>Opacity</span>
+          <span className="num muted">{Math.round(opacity * 100)}%</span>
+        </div>
         <input
-          className="w-full accent-[#d4ff4a]"
+          className="w-full accent-[var(--accent)]"
           type="range"
           min={0.2}
           max={1}
@@ -129,11 +128,10 @@ export default function AreaLayers({
       </label>
 
       {notes.map((n) => (
-        <p key={n} className="mb-1 text-[#f5a623]">
+        <p key={n} className="text-[12px] text-[#f5b34a]">
           {n}
         </p>
       ))}
-      <ClearButton onClear={onClear} />
     </div>
   );
 }
@@ -143,41 +141,36 @@ function LayerRow({
   on,
   disabled,
   onToggle,
+  ramp,
+  rampLabels,
   children,
 }: {
   title: string;
   on: boolean;
   disabled: boolean;
   onToggle: (v: boolean) => void;
+  ramp: string;
+  rampLabels: [string, string];
   children: React.ReactNode;
 }) {
   return (
-    <div className={`mb-3 ${disabled ? "opacity-40" : ""}`}>
-      <label className="mb-1 flex items-center gap-2 text-[11px]">
-        <input type="checkbox" checked={on && !disabled} disabled={disabled} onChange={(e) => onToggle(e.target.checked)} />
-        {title}
+    <div className={disabled ? "opacity-40" : ""}>
+      <label className="mb-1.5 flex cursor-pointer items-center gap-2.5">
+        <input
+          type="checkbox"
+          className="switch"
+          checked={on && !disabled}
+          disabled={disabled}
+          onChange={(e) => onToggle(e.target.checked)}
+        />
+        <span>{title}</span>
       </label>
-      <div className="pl-5 text-[#b8b6aa]">{children}</div>
-    </div>
-  );
-}
-
-function Ramp({ gradient, left, right }: { gradient: string; left: string; right: string }) {
-  return (
-    <div className="mb-1">
-      <div className="h-2 w-full" style={{ background: gradient }} />
-      <div className="flex justify-between text-[9px] text-[#8a8d84]">
-        <span>{left}</span>
-        <span>{right}</span>
+      <div className="h-1.5 w-full rounded-full" style={{ background: ramp }} />
+      <div className="faint mb-1 mt-0.5 flex justify-between text-[11px]">
+        <span>{rampLabels[0]}</span>
+        <span>{rampLabels[1]}</span>
       </div>
+      <p className="muted text-[12px] leading-snug">{children}</p>
     </div>
-  );
-}
-
-function ClearButton({ onClear }: { onClear: () => void }) {
-  return (
-    <button className="mt-1 w-full border border-[#2a2d33] px-2 py-1" onClick={onClear}>
-      Clear area
-    </button>
   );
 }

@@ -66,23 +66,22 @@ export default function TimeBar({
   if (start < 12) notes.push("Baseline starts before Sentinel-1 coverage; fewer prior scenes.");
 
   return (
-    <div className="pointer-events-auto border border-[#2a2d33] bg-[#0c0d10]/92 px-4 pb-2 pt-2 font-mono text-[10px] backdrop-blur">
+    <div className="panel pointer-events-auto px-5 pb-2 pt-3">
       <div className="mb-1 flex items-baseline justify-between gap-4">
-        <span className="tracking-[0.2em] text-[#8a8d84]">TIME</span>
-        <span className="text-[12px] text-[#e8e4d9]">
-          {label(start)} <span className="text-[#8a8d84]">→</span> {label(end)}
-          <span className="ml-2 text-[#8a8d84]">baseline: 12 months before</span>
+        <span className="text-[15px] font-semibold">
+          {label(start)} <span className="muted font-normal">→</span> {label(end)}
         </span>
+        <span className="muted text-[12px]">compared with the 12 months before</span>
       </div>
       <div className="relative h-6">
-        <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 bg-[#1a1c20]" />
+        <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-white/10" />
         <div
           className="absolute top-1/2 h-1 -translate-y-1/2 bg-[repeating-linear-gradient(45deg,#2a2d33_0_3px,transparent_3px_6px)]"
           style={{ left: 0, width: `${pct(OPTICAL_FROM)}%` }}
           title="Radar only (no Sentinel-2 optical yet)"
         />
         <div
-          className="absolute top-1/2 h-1 -translate-y-1/2 bg-[#d4ff4a]"
+          className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-[var(--accent)]"
           style={{ left: `${pct(start)}%`, width: `${pct(end) - pct(start)}%` }}
         />
         <input
@@ -104,14 +103,14 @@ export default function TimeBar({
           onChange={(e) => onChange(start, Math.max(Number(e.target.value), start))}
         />
       </div>
-      <div className="relative h-3 text-[#555]">
+      <div className="faint num relative h-4 text-[10.5px]">
         {years.map((y) => (
           <span key={y} className="absolute -translate-x-1/2" style={{ left: `${pct(monthIndex(y, 0))}%` }}>
             {y}
           </span>
         ))}
       </div>
-      {notes.length ? <div className="mt-1 text-[#f5a623]">{notes.join(" · ")}</div> : null}
+      {notes.length ? <div className="mt-1 text-[12px] text-[#f5b34a]">{notes.join(" · ")}</div> : null}
     </div>
   );
 }

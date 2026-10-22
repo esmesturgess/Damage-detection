@@ -3,14 +3,13 @@
 
 :root {
   --background: #050506;
-  --foreground: #e8e4d9;
-  --panel: #0c0d10;
-  --line: #2a2d33;
+  --foreground: #ecebe4;
+  --muted: #a4a79d;
+  --faint: #6f7269;
+  --line: rgba(255, 255, 255, 0.09);
+  --panel: rgba(13, 14, 17, 0.84);
+  --field: rgba(255, 255, 255, 0.05);
   --accent: #d4ff4a;
-  --burn: #ff5a1f;
-  --change: #6ec8ff;
-  --seismic: #c9a227;
-  --provisional: #ffd36a;
 }
 
 @theme inline {
@@ -26,16 +25,150 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-}
-
-.maplibregl-ctrl-attrib {
-  font-size: 10px;
-  background: rgba(0, 0, 0, 0.6) !important;
-  color: #888 !important;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 button {
   cursor: pointer;
+}
+button:disabled {
+  cursor: default;
+}
+
+/* Shared building blocks, so every panel reads the same way. */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.eyebrow {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.muted {
+  color: var(--muted);
+}
+.faint {
+  color: var(--faint);
+}
+.num {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--foreground);
+  transition: background 120ms, border-color 120ms;
+}
+.btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.btn:disabled {
+  opacity: 0.4;
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0b0c0e;
+  font-weight: 600;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #e1ff7a;
+  border-color: #e1ff7a;
+}
+.btn-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.field {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: var(--field);
+  color: var(--foreground);
+  outline: none;
+}
+.field:focus {
+  border-color: rgba(212, 255, 74, 0.6);
+}
+.field::placeholder {
+  color: var(--faint);
+}
+.seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
+}
+.seg button {
+  border-radius: 6px;
+  padding: 4px 6px;
+  color: var(--muted);
+}
+.seg button[aria-pressed="true"] {
+  background: rgba(212, 255, 74, 0.16);
+  color: var(--accent);
+}
+
+/* Switch-style checkbox. */
+.switch {
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: background 120ms;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #ecebe4;
+  transition: transform 120ms;
+}
+.switch:checked {
+  background: var(--accent);
+}
+.switch:checked::after {
+  transform: translateX(12px);
+  background: #0b0c0e;
+}
+.switch:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.55) !important;
+  color: #9a9a9a !important;
 }
 
 /* Two stacked range inputs make one two-handle slider: the tracks ignore
@@ -58,23 +191,23 @@ button {
 .range-thumb::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  margin-top: -1px;
   pointer-events: auto;
-  width: 10px;
-  height: 18px;
-  background: #e8e4d9;
-  border: 1px solid #050506;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #ecebe4;
+  border: 3px solid var(--accent);
   cursor: ew-resize;
 }
 .range-thumb::-moz-range-thumb {
   pointer-events: auto;
-  width: 10px;
-  height: 18px;
-  background: #e8e4d9;
-  border: 1px solid #050506;
-  border-radius: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #ecebe4;
+  border: 3px solid var(--accent);
   cursor: ew-resize;
 }
 .range-thumb:focus-visible::-webkit-slider-thumb {
-  outline: 2px solid #d4ff4a;
+  outline: 2px solid #fff;
 }

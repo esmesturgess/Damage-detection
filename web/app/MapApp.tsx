@@ -22,6 +22,7 @@ const RAKHINE: [number, number] = [93.8, 20.8];
 const API_DOWN = "API unreachable. Start uvicorn on :8000.";
 const LEVEL_COLOR = Object.fromEntries(LEVELS.map((l) => [l.id, l.color])) as Record<Level, string>;
 const SITE_BOX_KM = 3;
+const COORD_BOX_KM = 5;
 
 // Globe: EOX Sentinel-2 cloudless 2016 (CC BY 4.0; later years need a
 // subscription), under Carto's keyless vector labels and borders. Imagery
@@ -93,10 +94,8 @@ export default function MapApp() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showDetected, setShowDetected] = useState(false);
   const [range, setRange] = useState<[number, number]>([monthIndex(2017, 7), monthIndex(2017, 8)]);
-  const [probeMode, setProbeMode] = useState<"draw" | "coords">("draw");
-  const [lat, setLat] = useState("20.82");
-  const [lon, setLon] = useState("92.38");
-  const [sizeKm, setSizeKm] = useState("5");
+  const [coordText, setCoordText] = useState("");
+  const [reviewerOpen, setReviewerOpen] = useState(false);
   const [drawing, setDrawing] = useState(false);
   const drawStart = useRef<[number, number] | null>(null);
   const [aoi, setAoi] = useState<GeoJSON.Polygon | null>(null);
@@ -360,39 +359,22 @@ export default function MapApp() {
   }, [drawing]);
 
   function applyCoordinates() {
-    const la = Number(lat);
-    const lo = Number(lon);
-    const km = Number(sizeKm);
-    if (!(Math.abs(la) <= 90 && Math.abs(lo) <= 180 && km > 0 && km <= 50)) {
-      setProbeMsg("Latitude −90…90, longitude −180…180, box 0–50 km.");
+    const [la, lo] = coordText.split(/[\s,]+/).filter(Boolean).map(Number);
+    if (!(Math.abs(la) <= 90 && Math.abs(lo) <= 180)) {
+      setProbeMsg("Type latitude, longitude, e.g. 20.82, 92.38");
       return;
     }
-    const box = boxAround(la, lo, km);
+    const box = boxAround(la, lo, COORD_BOX_KM);
     setAoi(box);
     setProbeMsg("");
     const [sw, , ne] = box.coordinates[0];
     mapRef.current?.fitBounds([sw as [number, number], ne as [number, number]], { padding: 160, maxZoom: 12 });
   }
 
-  async function runCoverage() {
-    if (!aoi) return setProbeMsg("Draw a box or enter coordinates first.");
-    setProbeMsg("Checking coverage…");
-    const res = await fetch("/api/coverage", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ aoi_geojson: aoi, start_date: win.event.start, end_date: win.event.end }),
-    });
-    const data = await res.json();
-    if (!res.ok) return setProbeMsg(data.detail ?? "Coverage check failed.");
-    setProbeMsg(
-      data.live_gee
-        ? `Radar scenes: ${data.sentinel1?.scene_count} · optical: ${data.sentinel2?.scene_count}` +
-            (data.sentinel2?.mean_cloud_fraction != null
-              ? ` (${Math.round(data.sentinel2.mean_cloud_fraction * 100)}% cloud)`
-              : "") +
-            ` · ${data.enough_for_pwtt ? "enough to scan" : "too few radar scenes"}`
-        : "Earth Engine is offline here, so this is an estimate. " + (data.note ?? ""),
-    );
+  function clearArea() {
+    setAoi(null);
+    setAnalysis({ status: "idle" });
+    setProbeMsg("");
   }
 
   async function runScan() {
@@ -437,131 +419,159 @@ export default function MapApp() {
     <div className="relative h-full w-full">
       <div ref={container} className="h-full w-full" />
 
-      <div className="pointer-events-none absolute left-4 right-4 top-4 flex items-start gap-4">
-        <div className="w-64 shrink-0 border border-[#2a2d33] bg-[#0c0d10]/92 px-3 py-2 backdrop-blur">
-          <div className="font-mono text-[11px] tracking-[0.25em] text-[#d4ff4a]">BURN EVIDENCE</div>
-          <div className="mt-1 font-mono text-[10px] text-[#8a8d84]">probe · scan · add evidence · verify</div>
+      <div className="pointer-events-none absolute left-4 right-4 top-4 flex items-stretch gap-3">
+        <div className="panel flex w-72 shrink-0 items-center gap-2.5 px-4">
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--accent)] shadow-[0_0_10px_var(--accent)]" />
+          <span className="text-[15px] font-semibold tracking-tight">Burn Evidence</span>
         </div>
         <div className="min-w-0 flex-1">
           <TimeBar start={range[0]} end={range[1]} onChange={(s, e) => setRange([s, e])} />
         </div>
       </div>
 
-      <aside className="absolute bottom-4 left-4 top-28 w-64 overflow-auto border border-[#2a2d33] bg-[#0c0d10]/92 p-3 font-mono text-[11px] backdrop-blur">
-        <Section title="Probe an area">
-          <div className="mb-2 grid grid-cols-2 gap-1">
-            {(["draw", "coords"] as const).map((m) => (
-              <button
-                key={m}
-                className={`border px-2 py-1 ${probeMode === m ? "border-[#d4ff4a] text-[#d4ff4a]" : "border-[#2a2d33]"}`}
-                onClick={() => setProbeMode(m)}
-              >
-                {m === "draw" ? "Draw box" : "Coordinates"}
-              </button>
-            ))}
-          </div>
-          {probeMode === "draw" ? (
+      <aside className="panel absolute bottom-4 left-4 top-[104px] flex w-72 flex-col overflow-hidden">
+        <div className="flex-1 space-y-5 overflow-auto p-4">
+          <section>
+            <div className="eyebrow mb-2">Area</div>
+            {aoi ? null : (
+              <p className="muted mb-3">Pick an area to see imagery for these dates and scan it for change.</p>
+            )}
             <button
-              className={`mb-2 w-full border px-2 py-1 ${drawing ? "border-[#d4ff4a] text-[#d4ff4a]" : "border-[#2a2d33]"}`}
+              className={`btn mb-2 w-full ${drawing ? "btn-active" : ""}`}
               onClick={() => setDrawing(!drawing)}
             >
-              {drawing ? "Drag a box on the map…" : aoi ? "Redraw box" : "Start drawing"}
+              {drawing ? "Drag a box on the map…" : aoi ? "Draw a new box" : "Draw a box"}
             </button>
-          ) : (
-            <div className="mb-2">
-              <div className="mb-1 grid grid-cols-2 gap-1">
-                <Field label="lat" value={lat} onChange={setLat} />
-                <Field label="lon" value={lon} onChange={setLon} />
-              </div>
-              <Field label="box size, km" value={sizeKm} onChange={setSizeKm} />
-              <button className="mt-1 w-full border border-[#2a2d33] px-2 py-1" onClick={applyCoordinates}>
-                Go
-              </button>
-            </div>
-          )}
-          <div className="mb-2 text-[10px] leading-4 text-[#8a8d84]">
-            Window {win.event.start} → {win.event.end}
-            <br />
-            Baseline {win.baseline.start} → {win.baseline.end}
-          </div>
-          <button className="mb-1 w-full border border-[#2a2d33] px-2 py-1" onClick={runCoverage}>
-            Check imagery
-          </button>
-          <button className="w-full border border-[#d4ff4a]/50 px-2 py-1 text-[#d4ff4a]" onClick={runScan}>
-            Scan this area
-          </button>
-          {probeMsg ? <p className="mt-2 text-[10px] leading-4 text-[#b8b6aa]">{probeMsg}</p> : null}
-          {error ? <p className="mt-2 text-[10px] text-[#ff4d2e]">{error}</p> : null}
-        </Section>
-
-        {aoi ? (
-          <Section title="Area layers">
-            <AreaLayers
-              analysis={analysis}
-              on={layerOn}
-              opacity={opacity}
-              onToggle={(id, value) => setLayerOn((prev) => ({ ...prev, [id]: value }))}
-              onOpacity={setOpacity}
-              onClear={() => {
-                setAoi(null);
-                setAnalysis({ status: "idle" });
+            <form
+              className="flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                applyCoordinates();
               }}
-            />
-          </Section>
-        ) : null}
-
-        <Section title="Map">
-          {LEVELS.map((l) => (
-            <div key={l.id} className="mb-1.5 flex items-start gap-2" title={l.note}>
-              <span
-                className="mt-0.5 inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                style={
-                  l.id === "detected"
-                    ? { border: `1.5px solid ${l.color}` }
-                    : l.id === "disputed"
-                      ? { background: l.color, border: `2px solid ${LEVEL_COLOR.explained}` }
-                      : { background: l.color }
-                }
-              />
-              <span className={l.id === "detected" && !showDetected ? "text-[#555]" : ""}>
-                {l.label} <span className="text-[#8a8d84]">· {counts[l.id] ?? 0}</span>
-                <span className="block text-[9px] leading-3 text-[#8a8d84]">{l.note}</span>
-              </span>
-            </div>
-          ))}
-          <label className="mt-2 flex items-start gap-2 text-[10px] leading-4">
-            <input type="checkbox" checked={showDetected} onChange={(e) => setShowDetected(e.target.checked)} />
-            Show unreviewed detections. Off by default: a satellite signal alone isn&apos;t a claim.
-          </label>
-        </Section>
-
-        <Section title="Reviewer">
-          <label className="mb-2 flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={reviewer.enabled}
-              onChange={(e) => setReviewer({ ...reviewer, enabled: e.target.checked })}
-            />
-            Reviewer mode
-          </label>
-          {reviewer.enabled ? (
-            <div className="grid gap-1">
+            >
               <input
-                className="border border-[#2a2d33] bg-black px-2 py-1"
-                placeholder="reviewer name"
-                value={reviewer.name}
-                onChange={(e) => setReviewer({ ...reviewer, name: e.target.value })}
+                className="field num"
+                placeholder="or lat, lon"
+                value={coordText}
+                onChange={(e) => setCoordText(e.target.value)}
               />
-              <input
-                className="border border-[#2a2d33] bg-black px-2 py-1"
-                placeholder="reviewer token"
-                type="password"
-                value={reviewer.token}
-                onChange={(e) => setReviewer({ ...reviewer, token: e.target.value })}
+              <button className="btn px-3" aria-label="Go to coordinates">
+                →
+              </button>
+            </form>
+            {aoi ? (
+              <div className="mt-3 flex gap-2">
+                <button className="btn btn-primary flex-1" onClick={runScan}>
+                  Scan for change
+                </button>
+                <button className="btn" onClick={clearArea}>
+                  Clear
+                </button>
+              </div>
+            ) : null}
+            {probeMsg ? <p className="muted mt-2">{probeMsg}</p> : null}
+            {error ? <p className="mt-2 text-[#ff6b4a]">{error}</p> : null}
+          </section>
+
+          {aoi ? (
+            <section>
+              <div className="eyebrow mb-2">Layers</div>
+              <AreaLayers
+                analysis={analysis}
+                on={layerOn}
+                opacity={opacity}
+                onToggle={(id, value) => setLayerOn((prev) => ({ ...prev, [id]: value }))}
+                onOpacity={setOpacity}
               />
-            </div>
+            </section>
           ) : null}
-        </Section>
+
+          <section>
+            <div className="eyebrow mb-2">Verification</div>
+            <ul className="space-y-1">
+              {LEVELS.map((l) => (
+                <li
+                  key={l.id}
+                  className={`flex items-center gap-2.5 ${l.id === "detected" && !showDetected ? "faint" : ""}`}
+                  title={l.note}
+                >
+                  <span
+                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={
+                      l.id === "detected"
+                        ? { border: `1.5px solid ${l.color}` }
+                        : l.id === "disputed"
+                          ? { background: l.color, border: `2px solid ${LEVEL_COLOR.explained}` }
+                          : { background: l.color }
+                    }
+                  />
+                  <span className="flex-1">{l.label}</span>
+                  <span className="num muted">{counts[l.id] ?? 0}</span>
+                </li>
+              ))}
+            </ul>
+            <label className="mt-3 flex cursor-pointer items-center gap-2.5">
+              <input
+                type="checkbox"
+                className="switch"
+                checked={showDetected}
+                onChange={(e) => setShowDetected(e.target.checked)}
+              />
+              <span>Show unreviewed detections</span>
+            </label>
+          </section>
+        </div>
+
+        <div className="border-t border-[var(--line)] px-4 py-3">
+          {reviewerOpen || reviewer.enabled ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="eyebrow">Reviewer</span>
+                <button
+                  className="muted text-[12px] hover:text-white"
+                  onClick={() => {
+                    setReviewer({ name: "", token: "", enabled: false });
+                    setReviewerOpen(false);
+                  }}
+                >
+                  {reviewer.enabled ? "Sign out" : "Cancel"}
+                </button>
+              </div>
+              {reviewer.enabled ? (
+                <p className="muted">
+                  Signed in as <span className="text-[var(--foreground)]">{reviewer.name}</span>
+                </p>
+              ) : (
+                <form
+                  className="space-y-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (reviewer.name.trim() && reviewer.token) setReviewer({ ...reviewer, enabled: true });
+                  }}
+                >
+                  <input
+                    className="field"
+                    placeholder="Your name"
+                    value={reviewer.name}
+                    onChange={(e) => setReviewer({ ...reviewer, name: e.target.value })}
+                  />
+                  <input
+                    className="field"
+                    placeholder="Reviewer token"
+                    type="password"
+                    value={reviewer.token}
+                    onChange={(e) => setReviewer({ ...reviewer, token: e.target.value })}
+                  />
+                  <button className="btn w-full">Sign in</button>
+                </form>
+              )}
+            </div>
+          ) : (
+            <button className="muted text-[12px] hover:text-white" onClick={() => setReviewerOpen(true)}>
+              Reviewer sign-in
+            </button>
+          )}
+        </div>
       </aside>
 
       {selected ? (
@@ -575,29 +585,6 @@ export default function MapApp() {
         />
       ) : null}
     </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="mb-4 border-b border-[#2a2d33] pb-3">
-      <div className="mb-2 tracking-[0.2em] text-[#8a8d84]">{title.toUpperCase()}</div>
-      {children}
-    </div>
-  );
-}
-
-function Field({ label: text, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <label className="block">
-      <span className="text-[10px] text-[#8a8d84]">{text}</span>
-      <input
-        className="w-full border border-[#2a2d33] bg-black px-2 py-1"
-        inputMode="decimal"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
-    </label>
   );
 }
 
