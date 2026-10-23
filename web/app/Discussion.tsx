@@ -7,22 +7,13 @@ function when(iso: string): string {
   return iso.slice(0, 16).replace("T", " ");
 }
 
-/**
- * The site's open thread. An investigation's question is the opening post.
- * Comments are conversation only; they never change the verification level.
- */
+/** The site's open thread. Comments never change the verification level. */
 export default function Discussion({
-  question,
-  askedBy,
-  askedAt,
   comments,
   handle,
   onHandle,
   onPost,
 }: {
-  question: string | null;
-  askedBy: string | null;
-  askedAt: string;
   comments: Comment[];
   handle: string;
   onHandle: (h: string) => void;
@@ -30,21 +21,15 @@ export default function Discussion({
 }) {
   return (
     <section>
-      <h2 className="mb-1 text-[18px] font-semibold">Discussion</h2>
-      <p className="muted mb-4 text-[12px]">Open to everyone in the group. Comments don&apos;t change the verification level.</p>
+      <h2 className="section-title">Discussion</h2>
       <ol className="mb-4 space-y-0">
-        {question ? (
-          <Post author={askedBy ?? "investigator"} at={askedAt} tag="opened with">
-            <p className="text-[16px] leading-snug">{question}</p>
-          </Post>
-        ) : null}
         {comments.map((c) => (
           <Post key={c.id} author={c.author} at={c.created_at}>
             <p className="whitespace-pre-wrap leading-snug">{c.body}</p>
           </Post>
         ))}
       </ol>
-      {!question && comments.length === 0 ? (
+      {comments.length === 0 ? (
         <p className="muted mb-3">Nothing said yet. Start the conversation.</p>
       ) : null}
       <Composer handle={handle} onHandle={onHandle} onPost={onPost} placeholder="Add to the discussion" />
@@ -52,13 +37,12 @@ export default function Discussion({
   );
 }
 
-function Post({ author, at, tag, children }: { author: string; at: string; tag?: string; children: React.ReactNode }) {
+function Post({ author, at, children }: { author: string; at: string; children: React.ReactNode }) {
   return (
     <li className="relative border-l-2 border-[var(--line)] pb-4 pl-4 last:pb-1">
-      <span className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[#f4efe6]" aria-hidden />
+      <span className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[var(--accent)]" aria-hidden />
       <div className="mb-0.5 text-[12px]">
         <span className="font-semibold">{author}</span>
-        {tag ? <span className="muted"> {tag}</span> : null}
         <span className="faint num"> · {when(at)}</span>
       </div>
       {children}

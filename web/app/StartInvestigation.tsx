@@ -92,11 +92,11 @@ export default function StartInvestigation({
       className="absolute inset-0 z-30 flex items-center justify-center bg-black/55 p-6"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="panel on-brick w-full max-w-xl p-7">
+      <div className="panel on-paper w-full max-w-xl p-7">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <div className="eyebrow mb-1">New investigation</div>
-            <p className="muted">
+            <h2 className="display mb-1 text-[30px] font-semibold leading-none">New investigation</h2>
+            <p className="muted num text-[13px]">
               {win.event.start} → {win.event.end} · {km2.toFixed(0)} km² around {lat.toFixed(3)}°N {lon.toFixed(3)}°E
             </p>
           </div>
@@ -128,7 +128,7 @@ export default function StartInvestigation({
         </label>
 
         {overlaps && overlaps.length ? (
-          <div className="mb-5 rounded-lg bg-black/20 p-3.5">
+          <div className="mb-5 border border-[var(--rule)] p-3.5">
             <p className="mb-2 font-semibold">
               {overlaps.length === 1 ? "An open investigation overlaps" : `${overlaps.length} open investigations overlap`}{" "}
               this area and these dates
@@ -136,7 +136,7 @@ export default function StartInvestigation({
             <ul className="space-y-1.5">
               {overlaps.map((o) => (
                 <li key={o.id} className="flex items-center gap-3">
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: levelInfo(o.level).color }} />
+                  <span className="eyebrow w-24 shrink-0">{levelInfo(o.level).label}</span>
                   <span className="min-w-0 flex-1 truncate">
                     {o.name}
                     {o.name_local ? <span className="muted"> · {o.name_local}</span> : null}
@@ -151,7 +151,7 @@ export default function StartInvestigation({
           </div>
         ) : null}
 
-        {error ? <p className="mb-3 text-[#ffd0c2]">{error}</p> : null}
+        {error ? <p className="mb-3 text-[var(--accent)]">{error}</p> : null}
         <div className="flex gap-2">
           <button className="btn btn-primary flex-1" disabled={busy || !name.trim()} onClick={start}>
             {overlaps && overlaps.length ? "Start a new one anyway" : "Start investigation"}

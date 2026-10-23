@@ -16,7 +16,6 @@ class Settings(BaseSettings):
     enable_live_gee: bool = False
     gee_service_account_json: str = ""
     gee_project: str = ""
-    analyst_token: str = "dev-token"
     rakhine_validated: bool = True
     # LightGBM operating point from the validation split (ADS paper, §V).
     default_burn_threshold: float = 0.91

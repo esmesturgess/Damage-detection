@@ -12,7 +12,7 @@ import {
   type MapMouseEvent,
   type StyleSpecification,
 } from "maplibre-gl";
-import { LEVELS, siteCentre, type Level, type Reviewer, type Site } from "@/lib/types";
+import { LEVELS, siteCentre, type Level, type Site } from "@/lib/types";
 import AreaLayers, { AREA_LAYERS, type AreaLayerId, type Analysis } from "./AreaLayers";
 import Intro from "./Intro";
 import SiteOverlay from "./SiteOverlay";
@@ -112,13 +112,11 @@ export default function MapApp() {
   const [startOpen, setStartOpen] = useState(false);
   const [range, setRange] = useState<[number, number]>([monthIndex(2017, 7), monthIndex(2017, 8)]);
   const [coordText, setCoordText] = useState("");
-  const [reviewerOpen, setReviewerOpen] = useState(false);
   const [drawing, setDrawing] = useState(false);
   const drawStart = useRef<[number, number] | null>(null);
   const [aoi, setAoi] = useState<GeoJSON.Polygon | null>(null);
   const [probeMsg, setProbeMsg] = useState("");
   const [handle, setHandle] = useState("");
-  const [reviewer, setReviewer] = useState<Reviewer>({ name: "", token: "", enabled: false });
   const [analysis, setAnalysis] = useState<Analysis>({ status: "idle" });
   const [layerOn, setLayerOn] = useState<Record<AreaLayerId, boolean>>({
     before: false,
@@ -595,10 +593,9 @@ export default function MapApp() {
         <TimeBar start={range[0]} end={range[1]} onChange={(s, e) => setRange([s, e])} />
       </div>
 
-      <aside className="on-brick absolute bottom-0 left-0 top-0 flex w-72 flex-col border-r border-black/30">
-        <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-4 py-4">
-          <span className="h-3 w-3 rounded-sm bg-[#f4efe6]" />
-          <span className="flex-1 text-[15px] font-semibold tracking-tight">Burn Evidence</span>
+      <aside className="on-paper absolute bottom-0 left-0 top-0 flex w-72 flex-col border-r-2 border-[var(--rule)]">
+        <div className="flex items-center gap-2.5 border-b-2 border-[var(--rule)] px-4 py-4">
+          <span className="display flex-1 text-[24px] font-semibold leading-none">Burn Evidence</span>
           <button
             className="btn h-7 w-7 rounded-full p-0 text-[13px]"
             onClick={() => setIntroOpen(true)}
@@ -648,7 +645,7 @@ export default function MapApp() {
               </div>
             ) : null}
             {probeMsg ? <p className="muted mt-2">{probeMsg}</p> : null}
-            {error ? <p className="mt-2 text-[#ff6b4a]">{error}</p> : null}
+            {error ? <p className="mt-2 text-[var(--accent)] font-semibold">{error}</p> : null}
           </section>
 
           {aoi ? (
@@ -681,7 +678,7 @@ export default function MapApp() {
                   title={l.note}
                 >
                   <span
-                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                    className="inline-block h-3 w-3 shrink-0 rounded-full shadow-[0_0_0_1px_#5e2416]"
                     style={
                       l.id === "detected"
                         ? { border: `1.5px solid ${l.color}` }
@@ -709,63 +706,12 @@ export default function MapApp() {
           </section>
         </div>
 
-        <div className="border-t border-[var(--line)] px-4 py-3">
-          {reviewerOpen || reviewer.enabled ? (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="eyebrow">Reviewer</span>
-                <button
-                  className="muted text-[12px] hover:text-white"
-                  onClick={() => {
-                    setReviewer({ name: "", token: "", enabled: false });
-                    setReviewerOpen(false);
-                  }}
-                >
-                  {reviewer.enabled ? "Sign out" : "Cancel"}
-                </button>
-              </div>
-              {reviewer.enabled ? (
-                <p className="muted">
-                  Signed in as <span className="text-[var(--foreground)]">{reviewer.name}</span>
-                </p>
-              ) : (
-                <form
-                  className="space-y-2"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (reviewer.name.trim() && reviewer.token) setReviewer({ ...reviewer, enabled: true });
-                  }}
-                >
-                  <input
-                    className="field"
-                    placeholder="Your name"
-                    value={reviewer.name}
-                    onChange={(e) => setReviewer({ ...reviewer, name: e.target.value })}
-                  />
-                  <input
-                    className="field"
-                    placeholder="Reviewer token"
-                    type="password"
-                    value={reviewer.token}
-                    onChange={(e) => setReviewer({ ...reviewer, token: e.target.value })}
-                  />
-                  <button className="btn w-full">Sign in</button>
-                </form>
-              )}
-            </div>
-          ) : (
-            <button className="muted text-[12px] hover:text-white" onClick={() => setReviewerOpen(true)}>
-              Reviewer sign-in
-            </button>
-          )}
-        </div>
       </aside>
 
       {selected ? (
         <SiteOverlay
           site={selected}
           handle={handle}
-          reviewer={reviewer}
           onHandle={rememberHandle}
           onClose={() => window.history.pushState(null, "", "/")}
           onChanged={loadSites}
@@ -786,7 +732,7 @@ export default function MapApp() {
         <StartInvestigation
           aoi={aoi}
           win={win}
-          author={reviewer.enabled ? reviewer.name : handle}
+          author={handle}
           onClose={() => setStartOpen(false)}
           onOpen={(id, created) => {
             setStartOpen(false);

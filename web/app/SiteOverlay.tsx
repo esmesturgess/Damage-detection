@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Discussion, { EvidenceComments } from "./Discussion";
 import PriorReports from "./PriorReports";
-import { levelInfo, siteCentre, type Comment, type Evidence, type EvidenceCheck, type Reviewer, type Site } from "@/lib/types";
+import { levelInfo, siteCentre, type Comment, type Evidence, type EvidenceCheck, type Site } from "@/lib/types";
 
 const LADDER = ["detected", "corroborated", "verified"] as const;
 
@@ -16,20 +16,16 @@ const FEATURE_LABELS: Record<string, string> = {
   stable_water_fraction: "Standing water",
 };
 
-function reviewerHeaders(reviewer: Reviewer): Record<string, string> {
-  return reviewer.enabled ? { "x-analyst-token": reviewer.token, "x-analyst": reviewer.name } : {};
-}
-
-async function fetchEvidence(siteId: string, reviewer: Reviewer): Promise<Evidence[]> {
-  const res = await fetch(`/api/sites/${siteId}/evidence`, { headers: reviewerHeaders(reviewer) });
+async function fetchEvidence(siteId: string): Promise<Evidence[]> {
+  const res = await fetch(`/api/sites/${siteId}/evidence`);
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
-async function post(path: string, body: unknown, headers: Record<string, string> = {}) {
+async function post(path: string, body: unknown) {
   const res = await fetch(path, {
     method: "POST",
-    headers: { "content-type": "application/json", ...headers },
+    headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
@@ -40,7 +36,6 @@ async function post(path: string, body: unknown, headers: Record<string, string>
 export default function SiteOverlay({
   site,
   handle,
-  reviewer,
   onHandle,
   onClose,
   onChanged,
@@ -50,7 +45,6 @@ export default function SiteOverlay({
 }: {
   site: Site;
   handle: string;
-  reviewer: Reviewer;
   onHandle: (h: string) => void;
   onClose: () => void;
   onChanged: () => void;
@@ -77,7 +71,7 @@ export default function SiteOverlay({
 
   useEffect(() => {
     let cancelled = false;
-    fetchEvidence(site.id, reviewer).then(
+    fetchEvidence(site.id).then(
       (items) => !cancelled && setEvidence(items),
       () => !cancelled && setEvidence([]),
     );
@@ -88,7 +82,7 @@ export default function SiteOverlay({
     return () => {
       cancelled = true;
     };
-  }, [site.id, reviewer, version]);
+  }, [site.id, version]);
 
   async function act(fn: () => Promise<unknown>, done: string): Promise<boolean> {
     try {
@@ -119,8 +113,14 @@ export default function SiteOverlay({
           { label: "Burn, strongest 5%", value: f.p95_dnbr != null ? Number(f.p95_dnbr).toFixed(2) : "—" },
         ]),
     { label: "Evidence", value: String(v.evidence_count) },
-    { label: "Independent sources", value: String(v.independent_sources) },
   ];
+  const stampNote =
+    v.level === "verified"
+      ? "signed off"
+      : v.level === "explained" || v.level === "disputed"
+        ? "by a colleague's verdict"
+        : `${v.independent_sources} of 2 independent sources`;
+  const needHandle = () => setMsg("Pick a handle first (any name). You can set it in the discussion box.");
 
   return (
     <div
@@ -130,25 +130,19 @@ export default function SiteOverlay({
       aria-modal="true"
       aria-label={site.name ?? "Site"}
     >
-      <div className="on-brick overlay-brick relative h-full overflow-auto rounded-2xl border border-[var(--line)] shadow-2xl">
-        <button
-          className="absolute right-5 top-5 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/20 text-[24px] leading-none hover:bg-black/35"
-          onClick={onClose}
-          aria-label="Close"
-        >
-          ×
-        </button>
-
-        {/* Case-file cover */}
-        <header className="border-b border-[var(--line)] px-8 pb-6 pt-7 lg:px-10">
-          <div className="eyebrow mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="text-[var(--foreground)]">{isInvestigation ? "Investigation" : "Hot-spot"}</span>
-            <span>{site.region ?? "unassigned region"}</span>
-            <span className="num">
-              {lat.toFixed(4)}°N {lon.toFixed(4)}°E
-            </span>
+      <div className="on-paper relative h-full overflow-auto border border-[var(--rule)] shadow-2xl">
+        {/* Case-file tab strip */}
+        <div className="num flex flex-wrap items-stretch border-b-2 border-[var(--rule)] text-[13px] tracking-[0.04em]">
+          <span className="bg-[var(--accent)] px-5 py-3 font-bold uppercase text-[var(--paper)]">
+            {isInvestigation ? "Investigation" : "Hot-spot"}
+          </span>
+          <span className="border-r border-[var(--rule)] px-5 py-3 uppercase">{site.region ?? "unassigned region"}</span>
+          <span className="border-r border-[var(--rule)] px-5 py-3">
+            {lat.toFixed(4)}°N {lon.toFixed(4)}°E
+          </span>
+          <span className="flex-1 px-5 py-3">
             <button
-              className="link normal-case tracking-normal"
+              className="link"
               onClick={() => {
                 navigator.clipboard?.writeText(window.location.href).then(
                   () => setMsg("Link copied."),
@@ -158,34 +152,45 @@ export default function SiteOverlay({
             >
               copy link
             </button>
-          </div>
-          <div className="flex flex-wrap items-end justify-between gap-4 pr-14">
+          </span>
+          <button
+            className="w-14 border-l border-[var(--rule)] text-[26px] leading-none text-[var(--accent)] hover:bg-[var(--accent-soft)]"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Case-file cover */}
+        <header className="px-8 pb-7 pt-8 lg:px-12">
+          <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="max-w-3xl">
-              <h1 className="text-[30px] font-semibold leading-[1.1] tracking-tight lg:text-[36px]">{site.name ?? site.id}</h1>
-              {site.name_local ? <p className="mt-1 text-[22px] opacity-80">{site.name_local}</p> : null}
+              <h1 className="display text-[44px] font-semibold leading-none lg:text-[60px]">{site.name ?? site.id}</h1>
+              {site.name_local ? <p className="display mt-1.5 text-[26px] text-[var(--foreground)]">{site.name_local}</p> : null}
+              {site.question ? (
+                <>
+                  <p className="display mt-5 text-[21px] italic leading-snug text-[var(--foreground)]">“{site.question}”</p>
+                  {site.created_by ? <p className="muted mt-1 text-[13px]">asked by {site.created_by}</p> : null}
+                </>
+              ) : null}
             </div>
-            <span className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-black/20 px-3.5 py-1.5 text-[14px]">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: info.color }} />
+            <div className="stamp mt-2" title={v.why}>
               {info.label}
-            </span>
+              <div className="text-[11px] font-normal tracking-[0.06em] normal-case">{stampNote}</div>
+            </div>
           </div>
-          {site.question ? (
-            <blockquote className="mt-5 max-w-3xl border-l-4 border-[#f4efe6]/60 pl-4 text-[16px] leading-snug">
-              {site.question}
-              {site.created_by ? <span className="muted block text-[12px]">asked by {site.created_by}</span> : null}
-            </blockquote>
-          ) : null}
-          <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
+          <dl className="mt-7 grid grid-cols-2 border border-[var(--rule)] sm:grid-cols-4">
             {facts.map((fact) => (
-              <div key={fact.label} className="border-l-2 border-[var(--line)] pl-3">
-                <dt className="faint text-[11px] uppercase tracking-[0.12em]">{fact.label}</dt>
-                <dd className="mt-0.5 whitespace-nowrap text-[20px] font-medium leading-tight">{fact.value}</dd>
+              <div key={fact.label} className="border-[var(--rule)] px-4 py-3 [&:not(:last-child)]:border-r">
+                <dt className="eyebrow">{fact.label}</dt>
+                <dd className="mt-0.5 whitespace-nowrap text-[19px] font-medium leading-tight">{fact.value}</dd>
               </div>
             ))}
           </dl>
         </header>
 
-        <div className="grid gap-8 px-8 py-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)] lg:px-10">
+        <div className="grid gap-10 px-8 pb-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)] lg:px-12">
           {/* Left: what the satellite saw, then what people have found */}
           <div className="min-w-0 space-y-10">
             <SiteImagery siteId={site.id} />
@@ -207,14 +212,14 @@ export default function SiteOverlay({
             />
 
             <section>
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-[18px] font-semibold">Evidence</h2>
+              <h2 className="section-title flex items-end justify-between">
+                Evidence
                 {adding ? null : (
-                  <button className="btn btn-primary px-3 py-1.5" onClick={() => setAdding(true)}>
+                  <button className="btn btn-primary mb-1.5 px-3 py-1.5 font-sans text-[14px]" onClick={() => setAdding(true)}>
                     + Add evidence
                   </button>
                 )}
-              </div>
+              </h2>
               {adding ? (
                 <AddEvidence
                   handle={handle}
@@ -228,23 +233,25 @@ export default function SiteOverlay({
                 />
               ) : null}
               {evidence.length === 0 && !adding ? (
-                <p className="muted rounded-xl border border-dashed border-[var(--line)] px-4 py-6 text-center">
+                <p className="muted border border-dashed border-[var(--line)] px-4 py-6 text-center">
                   No evidence yet. Links, testimony, photos and video all help.
                 </p>
               ) : null}
-              <ul className="grid gap-3 xl:grid-cols-2">
-                {evidence.map((item) => (
+              <ul>
+                {evidence.map((item, i) => (
                   <EvidenceItem
                     key={item.id}
+                    n={i + 1}
                     item={item}
                     others={evidence.filter((e) => e.id !== item.id)}
-                    reviewer={reviewer}
                     comments={comments.filter((c) => c.evidence_id === item.id)}
                     handle={handle}
                     onHandle={onHandle}
                     onComment={(body) => act(() => post(`/api/sites/${site.id}/comments`, { body, handle, evidence_id: item.id }), "")}
                     onCheck={(check) =>
-                      act(() => post(`/api/evidence/${item.id}/check`, check, reviewerHeaders(reviewer)), "Check saved.")
+                      handle.trim()
+                        ? act(() => post(`/api/evidence/${item.id}/check`, { ...check, handle }), "Check saved.")
+                        : (needHandle(), Promise.resolve(false))
                     }
                   />
                 ))}
@@ -252,9 +259,6 @@ export default function SiteOverlay({
             </section>
 
             <Discussion
-              question={site.question}
-              askedBy={site.created_by}
-              askedAt={site.created_at}
               comments={comments.filter((c) => c.evidence_id === null)}
               handle={handle}
               onHandle={onHandle}
@@ -265,7 +269,7 @@ export default function SiteOverlay({
           {/* Right rail: the verdict so far, readings and actions */}
           <aside className="space-y-8 lg:sticky lg:top-6 lg:self-start">
             {isInvestigation ? null : parent ? (
-              <section className="rounded-xl border border-[var(--line)] p-5">
+              <section className="border border-[var(--rule)] p-5">
                 <div className="eyebrow mb-1.5">Part of investigation</div>
                 <p className="mb-3 text-[15px] font-semibold">
                   {parent.name}
@@ -276,20 +280,17 @@ export default function SiteOverlay({
                 </button>
               </section>
             ) : (
-              <section className="rounded-xl border border-[var(--line)] p-5">
-                <div className="eyebrow mb-1.5">Not part of an investigation</div>
-                <p className="muted mb-3 leading-snug">
-                  Start one for this area to gather evidence and discuss it with colleagues.
-                </p>
+              <section className="border border-[var(--rule)] p-5">
+                <div className="eyebrow mb-3">Not part of an investigation</div>
                 <button className="btn btn-primary w-full" onClick={() => onStartHere(site)}>
                   Start investigation here
                 </button>
               </section>
             )}
 
-            <section className="rounded-xl bg-black/20 p-5">
+            <section className="border border-[var(--rule)] p-5">
               <div className="eyebrow mb-3">Verification</div>
-              <div className="mb-4 flex gap-1.5">
+              <div className="mb-2 flex gap-1.5">
                 {LADDER.map((step) => {
                   const reached =
                     v.level !== "explained" &&
@@ -297,46 +298,18 @@ export default function SiteOverlay({
                     LADDER.indexOf(step) <= LADDER.indexOf(v.level as (typeof LADDER)[number]);
                   return (
                     <div key={step} className="flex-1">
-                      <div
-                        className="mb-1.5 h-1.5 rounded-full"
-                        style={{ background: reached ? levelInfo(step).color : "rgba(255,255,255,0.14)" }}
-                      />
-                      <span className={`text-[12px] ${reached ? "" : "faint"}`}>{levelInfo(step).label}</span>
+                      <div className={`mb-1.5 h-2.5 border border-[var(--rule)] ${reached ? "bg-[var(--accent)]" : ""}`} />
+                      <span className="text-[12px]">{levelInfo(step).label}</span>
                     </div>
                   );
                 })}
               </div>
-              <p className="text-[15px] font-semibold" style={{ color: info.color }}>
-                {info.label}
-              </p>
-              <p className="muted mt-1 leading-snug">{v.why}</p>
+              <p className="mt-3 leading-snug">{v.why}</p>
             </section>
 
             {isInvestigation ? null : <SatelliteReading site={site} onChanged={onChanged} />}
 
             <section>
-              <div className="eyebrow mb-2">Do you agree?</div>
-              <div className="mb-1.5 grid grid-cols-3 gap-2">
-                {(["agree", "disagree", "unsure"] as const).map((stance) => (
-                  <button
-                    key={stance}
-                    className="btn flex-col gap-0 py-2 capitalize"
-                    onClick={() =>
-                      handle.trim()
-                        ? act(() => post(`/api/sites/${site.id}/assessment`, { handle, stance }), "Thanks, noted.")
-                        : setMsg("Pick a handle first (any name; it's never shown). Use “Add evidence” to set one.")
-                    }
-                  >
-                    <span className="num text-[18px] leading-tight">{v.agreement[stance]}</span>
-                    <span className="muted text-[12px]">{stance}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="faint text-[12px] leading-snug">Agreement helps prioritise. Only evidence changes the level.</p>
-            </section>
-
-            {reviewer.enabled ? (
-              <section>
                 <div className="eyebrow mb-2">Your verdict</div>
                 <div className="mb-1.5 grid grid-cols-2 gap-2">
                   {(
@@ -351,18 +324,19 @@ export default function SiteOverlay({
                       key={verdict}
                       className="btn"
                       onClick={() =>
-                        act(() => post(`/api/sites/${site.id}/verdict`, { verdict }, reviewerHeaders(reviewer)), "Verdict saved.")
+                        handle.trim()
+                          ? act(() => post(`/api/sites/${site.id}/verdict`, { verdict, handle }), "Verdict saved.")
+                          : needHandle()
                       }
                     >
                       {text}
                     </button>
                   ))}
                 </div>
-                <p className="faint text-[12px] leading-snug">
+                <p className="muted text-[12px] leading-snug">
                   Sign-off counts only with 2+ independent sources, from someone who checked none of them.
                 </p>
               </section>
-            ) : null}
 
             {site.is_demo ? <p className="faint text-[12px]">Demo location: synthetic data, not a finding.</p> : null}
           </aside>
@@ -372,7 +346,7 @@ export default function SiteOverlay({
       </div>
 
       {msg ? (
-        <div className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-[#f4efe6] px-4 py-2 text-[#5a2318] shadow-lg">
+        <div className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 bg-[var(--accent)] px-4 py-2 text-[var(--paper)] shadow-lg">
           {msg}
           <button className="ml-3 opacity-60 hover:opacity-100" onClick={() => setMsg("")} aria-label="Dismiss">
             ×
@@ -438,7 +412,7 @@ function SiteImagery({ siteId }: { siteId: string }) {
 
   return (
     <section>
-      <div className="relative aspect-[16/10] max-h-[460px] w-full overflow-hidden rounded-xl bg-black/30">
+      <div className="relative aspect-[16/10] max-h-[460px] w-full overflow-hidden bg-[#2b2a24]">
         {current?.error ? (
           <p className="muted absolute inset-0 flex items-center justify-center p-6 text-center">{current.error}</p>
         ) : view === "compare" && layers.before && layers.after ? (
@@ -453,8 +427,8 @@ function SiteImagery({ siteId }: { siteId: string }) {
             />
             {/* eslint-enable @next/next/no-img-element */}
             <div className="pointer-events-none absolute inset-y-0 w-0.5 bg-white shadow" style={{ left: `${split}%` }} />
-            <span className="absolute left-3 top-3 rounded bg-black/50 px-2 py-0.5 text-[12px]">Before</span>
-            <span className="absolute right-3 top-3 rounded bg-black/50 px-2 py-0.5 text-[12px]">After</span>
+            <span className="absolute left-3 top-3 rounded bg-black/60 px-2 py-0.5 text-[12px] text-[var(--paper)]">Before</span>
+            <span className="absolute right-3 top-3 rounded bg-black/60 px-2 py-0.5 text-[12px] text-[var(--paper)]">After</span>
             <input
               aria-label="Compare before and after"
               type="range"
@@ -475,7 +449,7 @@ function SiteImagery({ siteId }: { siteId: string }) {
           </div>
         )}
         {caption ? (
-          <span className="num absolute bottom-3 left-3 rounded bg-black/50 px-2 py-0.5 text-[12px]">
+          <span className="num absolute bottom-3 left-3 rounded bg-black/60 px-2 py-0.5 text-[12px] text-[var(--paper)]">
             {caption.start} → {caption.end}
           </span>
         ) : null}
@@ -519,24 +493,23 @@ function useHotspots(investigationId: string | null): Site[] {
 function HotspotList({ hotspots, onOpen }: { hotspots: Site[]; onOpen: (id: string) => void }) {
   return (
     <section>
-      <h2 className="mb-1 text-[18px] font-semibold">Hot-spots in this area</h2>
-      <p className="muted mb-3 text-[12px]">
-        Radar change clusters found by scans, strongest first. Scan the area again to add more.
-      </p>
+      <h2 className="section-title">Hot-spots in this area</h2>
       {hotspots.length === 0 ? (
-        <p className="muted rounded-xl border border-dashed border-[var(--line)] px-4 py-5 text-center">
+        <p className="muted border border-dashed border-[var(--line)] px-4 py-5 text-center">
           No hot-spots yet. Close this page and press “Scan for change”.
         </p>
       ) : (
-        <ol className="divide-y divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)]">
+        <ol className="divide-y divide-[var(--line)] border-b border-[var(--line)]">
           {hotspots.slice(0, 12).map((h, i) => {
             const feat = h.features ?? {};
             return (
               <li key={h.id}>
-                <button className="flex w-full items-center gap-4 px-4 py-2.5 text-left hover:bg-white/5" onClick={() => onOpen(h.id)}>
-                  <span className="faint num w-5 text-[12px]">{i + 1}</span>
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: levelInfo(h.verification.level).color }} />
-                  <span className="num flex-1">change {h.pwtt_z?.toFixed(1) ?? "—"}</span>
+                <button className="flex w-full items-center gap-4 px-1 py-2.5 text-left hover:bg-[var(--accent-soft)]" onClick={() => onOpen(h.id)}>
+                  <span className="num w-6 font-bold text-[var(--accent)]">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="flex-1">
+                    Radar change <span className="num">{h.pwtt_z?.toFixed(1) ?? "—"}</span>
+                    <span className="muted"> · {levelInfo(h.verification.level).label.toLowerCase()}</span>
+                  </span>
                   <span className="muted num text-[12px]">
                     {feat.hotspot_area_ha != null ? `${Number(feat.hotspot_area_ha).toFixed(1)} ha` : ""}
                     {feat.p95_dnbr != null ? ` · burn ${Number(feat.p95_dnbr).toFixed(2)}` : ""}
@@ -568,8 +541,8 @@ function SiteHistory({ siteId, version }: { siteId: string; version: number }) {
   }, [siteId, version]);
 
   return (
-    <section className="border-t border-[var(--line)] px-8 py-7 lg:px-10">
-      <h2 className="mb-4 text-[18px] font-semibold">History</h2>
+    <section className="border-t-2 border-[var(--rule)] px-8 py-7 lg:px-12">
+      <h2 className="display mb-4 text-[26px] font-semibold">History</h2>
       {events.length === 0 ? (
         <p className="muted">No recorded activity yet.</p>
       ) : (
@@ -577,7 +550,7 @@ function SiteHistory({ siteId, version }: { siteId: string; version: number }) {
           <span className="absolute left-0 right-0 top-[5px] h-px bg-[var(--line)]" aria-hidden />
           {events.map((e, i) => (
             <li key={i} className="relative w-48 shrink-0">
-              <span className="relative mb-3 block h-[11px] w-[11px] rounded-full border-2 border-[var(--brick-bg)] bg-[#f4efe6]" />
+              <span className="relative mb-3 block h-[11px] w-[11px] rounded-full border-2 border-[var(--paper)] bg-[var(--accent)]" />
               <div className="faint num text-[12px]">{e.at.slice(0, 16).replace("T", " ")}</div>
               <div className="leading-snug">{e.summary}</div>
             </li>
@@ -599,29 +572,24 @@ function SatelliteReading({ site, onChanged }: { site: Site; onChanged: () => vo
 
   return (
     <section className="mb-6">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="eyebrow">Satellite reading</span>
-        <span className="rounded-full bg-[#f5b34a]/15 px-2 py-0.5 text-[11px] text-[#f5b34a]">machine detection</span>
-      </div>
-      <div className="mb-3 grid grid-cols-3 gap-2">
-        <Stat label="Radar change" value={site.pwtt_z != null ? site.pwtt_z.toFixed(1) : "—"} />
-        <Stat label="Optical" value={site.optical_read === "cloud_gap" ? "cloud" : "clear"} />
-        <Stat label="Calibration" value={site.calibration_status === "validated" ? "validated" : "provisional"} />
-      </div>
-      {site.calibration_status === "provisional" ? (
-        <p className="mb-2 text-[12px] leading-snug text-[#ffd36a]">
-          Burn readings are calibrated on Rakhine imagery; here they are provisional.
-        </p>
-      ) : null}
-      {site.optical_read === "cloud_gap" ? (
-        <p className="mb-2 text-[12px] leading-snug text-[#6ec8ff]">
-          No clear optical image: radar change still ran, burn readings didn&apos;t.
-        </p>
-      ) : null}
+      <div className="eyebrow mb-2">What the satellite measured</div>
+      <ul className="mb-3 space-y-1 leading-snug">
+        <li>
+          Radar change strength <span className="num font-bold">{site.pwtt_z != null ? site.pwtt_z.toFixed(1) : "—"}</span>
+        </li>
+        <li>
+          {site.optical_read === "cloud_gap"
+            ? "No clear optical image, so there are no burn readings."
+            : "Clear optical image for the burn readings."}
+        </li>
+        {site.calibration_status === "provisional" ? (
+          <li>Outside Rakhine, where the burn model was trained, so treat burn readings as rough.</li>
+        ) : null}
+      </ul>
       {features.length ? (
-        <dl className="mb-3 divide-y divide-[var(--line)] rounded-lg border border-[var(--line)]">
+        <dl className="mb-3 divide-y divide-[var(--line)] border-y border-[var(--rule)]">
           {features.map(([k, value]) => (
-            <div key={k} className="flex justify-between gap-3 px-3 py-1.5">
+            <div key={k} className="flex justify-between gap-3 py-1.5">
               <dt className="muted">{FEATURE_LABELS[k] ?? k}</dt>
               <dd className="num">{Number(value).toFixed(k === "hotspot_area_ha" ? 1 : 2)}</dd>
             </div>
@@ -630,7 +598,7 @@ function SatelliteReading({ site, onChanged }: { site: Site; onChanged: () => vo
       ) : null}
       {seismic?.flag ? (
         <p className="leading-snug">
-          <span className={seismic.flag === "possible_seismic" ? "text-[#e0b84a]" : "muted"}>
+          <span className={seismic.flag === "possible_seismic" ? "text-[var(--accent)]" : "muted"}>
             {seismic.flag === "possible_seismic" ? "Possible earthquake cause" : "No damaging earthquake found"}
           </span>
           {top?.magnitude ? (
@@ -663,30 +631,21 @@ function SatelliteReading({ site, onChanged }: { site: Site; onChanged: () => vo
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg bg-white/[0.04] px-2.5 py-2">
-      <div className="faint text-[11px]">{label}</div>
-      <div className="num">{value}</div>
-    </div>
-  );
-}
-
 const MARK: Record<string, string> = { yes: "✓", no: "✗", unsure: "?" };
 
 function EvidenceItem({
+  n,
   item,
   others,
-  reviewer,
   comments,
   handle,
   onHandle,
   onComment,
   onCheck,
 }: {
+  n: number;
   item: Evidence;
   others: Evidence[];
-  reviewer: Reviewer;
   comments: Comment[];
   handle: string;
   onHandle: (h: string) => void;
@@ -696,11 +655,17 @@ function EvidenceItem({
   const [open, setOpen] = useState(false);
   const c = item.check;
   return (
-    <li className="rounded-lg border border-[var(--line)] p-3">
-      <div className="faint mb-1 text-[11px]">
-        {item.kind === "link" ? "Link" : item.kind === "prior_report" ? `Prior report · ${item.record?.source === "acled_sample" ? "sample" : "ACLED"}` : "Testimony"}
-        {item.visibility === "reviewers" ? " · reviewers only" : ""}
-        {item.is_demo ? " · demo" : ""}
+    <li className="grid grid-cols-[2.5rem_minmax(0,1fr)] border-b border-[var(--line)] py-3">
+      <span className="num pt-0.5 font-bold text-[var(--accent)]">E{n}</span>
+      <div className="min-w-0">
+      <div className="eyebrow mb-1 flex items-center justify-between gap-2">
+        <span>
+          {item.kind === "link" ? "Link" : item.kind === "prior_report" ? `Prior report · ${item.record?.source === "acled_sample" ? "sample" : "ACLED"}` : "Testimony"}
+          {item.is_demo ? " · demo" : ""}
+        </span>
+        <span className={`border border-[var(--rule)] px-1.5 text-[10.5px] text-[var(--accent)] ${c ? "" : "border-dashed"}`}>
+          {c ? "Checked" : "Unchecked"}
+        </span>
       </div>
       {item.url ? (
         <a className="link break-all" href={item.url} target="_blank" rel="noopener noreferrer nofollow">
@@ -708,7 +673,6 @@ function EvidenceItem({
         </a>
       ) : null}
       {item.body ? <p className="whitespace-pre-wrap leading-snug">{item.body}</p> : null}
-      {!item.url && !item.body ? <p className="muted">Shared with reviewers only.</p> : null}
       <div className="mt-1.5 text-[12px]">
         {c ? (
           <span className="muted">
@@ -717,14 +681,12 @@ function EvidenceItem({
             <span className="faint"> · checked by {c.reviewer}</span>
           </span>
         ) : (
-          <span className="text-[#f5b34a]">Awaiting a reviewer check</span>
+          <span className="muted">Awaiting a colleague&apos;s check</span>
         )}
       </div>
-      {reviewer.enabled ? (
-        <button className="link mt-1.5 text-[12px]" onClick={() => setOpen(!open)}>
-          {open ? "Cancel" : c ? "Re-check" : "Check this item"}
-        </button>
-      ) : null}
+      <button className="link mt-1.5 text-[12px]" onClick={() => setOpen(!open)}>
+        {open ? "Cancel" : c ? "Re-check" : "Check this item"}
+      </button>
       {open ? (
         <CheckForm
           others={others}
@@ -735,6 +697,7 @@ function EvidenceItem({
         />
       ) : null}
       <EvidenceComments comments={comments} handle={handle} onHandle={onHandle} onPost={onComment} />
+      </div>
     </li>
   );
 }
@@ -825,9 +788,8 @@ function AddEvidence({
 }) {
   const [kind, setKind] = useState<"link" | "testimony">("link");
   const [text, setText] = useState("");
-  const [privateItem, setPrivateItem] = useState(false);
   return (
-    <div className="mb-3 space-y-2.5 rounded-lg border border-[var(--line)] p-3">
+    <div className="mb-3 space-y-2.5 border border-[var(--line)] p-3">
       <div className="seg">
         {(["link", "testimony"] as const).map((k) => (
           <button key={k} aria-pressed={kind === k} onClick={() => setKind(k)}>
@@ -852,21 +814,12 @@ function AddEvidence({
       )}
       <input
         className="field"
-        placeholder="Your handle (any name, never shown)"
+        placeholder="Your handle"
         value={handle}
         onChange={(e) => onHandle(e.target.value)}
       />
-      <label className="flex cursor-pointer items-start gap-2.5 text-[12px] leading-snug">
-        <input
-          type="checkbox"
-          className="switch mt-0.5"
-          checked={privateItem}
-          onChange={(e) => setPrivateItem(e.target.checked)}
-        />
-        <span>Reviewers only: it still counts, but isn&apos;t published.</span>
-      </label>
-      <p className="faint text-[12px] leading-snug">
-        Who submitted evidence is never shown. Don&apos;t include names or faces of people who could be put at risk.
+      <p className="muted text-[12px] leading-snug">
+        Don&apos;t include names or faces of people who could be put at risk.
       </p>
       <div className="flex gap-2">
         <button
@@ -876,7 +829,7 @@ function AddEvidence({
             const ok = await onSubmit({
               kind,
               ...(kind === "link" ? { url: text } : { body: text }),
-              visibility: privateItem ? "reviewers" : "public",
+              visibility: "public",
               handle,
             });
             if (ok) setText("");

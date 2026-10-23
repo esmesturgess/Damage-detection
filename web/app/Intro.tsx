@@ -18,10 +18,9 @@ const STEPS = [
 export default function Intro({ onClose, onExample }: { onClose: () => void; onExample: () => void }) {
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 p-6">
-      <div className="panel on-brick w-full max-w-lg p-7">
+      <div className="panel on-paper w-full max-w-lg p-7">
         <div className="mb-1 flex items-center gap-2.5">
-          <span className="h-3 w-3 rounded-sm bg-[#f4efe6]" />
-          <h1 className="text-[18px] font-semibold tracking-tight">Burn Evidence</h1>
+          <h1 className="display text-[34px] font-semibold leading-none">Burn Evidence</h1>
         </div>
         <p className="muted mb-6">
           Find burning and destruction in satellite imagery, then build the evidence for what happened.
@@ -29,8 +28,8 @@ export default function Intro({ onClose, onExample }: { onClose: () => void; onE
         <ol className="mb-6 space-y-4">
           {STEPS.map((step, i) => (
             <li key={step.title} className="flex gap-3.5">
-              <span className="num flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--accent-soft)] text-[var(--accent-text)]">
-                {i + 1}
+              <span className="num flex h-7 w-7 shrink-0 items-center justify-center border border-[var(--rule)] font-bold text-[var(--accent)]">
+                {String(i + 1).padStart(2, "0")}
               </span>
               <div>
                 <div className="font-semibold">{step.title}</div>

@@ -55,7 +55,7 @@ cd web && npm install && npm run dev
 
 - UI: http://localhost:3000
 - API docs: http://localhost:8000/docs
-- Reviewer mode in the UI uses the `ANALYST_TOKEN` from `.env` (default `dev-token`).
+- Everyone in the group is equal: checking evidence and giving a verdict need only a handle until accounts exist. No one can check their own submission.
 
 ### Earth Engine (optional)
 

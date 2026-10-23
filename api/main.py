@@ -5,7 +5,7 @@ from typing import Any
 
 import httpx
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -57,10 +57,15 @@ def startup() -> None:
         seed_demo_evidence(conn)
 
 
-def require_analyst(x_analyst_token: str | None = Header(default=None), x_analyst: str | None = Header(default=None)) -> str:
-    if x_analyst_token != settings.analyst_token:
-        raise HTTPException(status_code=401, detail="Invalid or missing analyst token")
-    return x_analyst or "anonymous"
+def require_handle(handle: str | None) -> str:
+    """Everyone in the group is equal; a check or verdict just needs a name.
+
+    Real accounts replace handles later; until then this is a closed, local tool.
+    """
+    name = (handle or "").strip()[:64]
+    if not name:
+        raise HTTPException(status_code=400, detail="Pick a handle first (any name).")
+    return name
 
 
 class CoverageIn(BaseModel):
@@ -89,6 +94,7 @@ class SeismicIn(BaseModel):
 class VerdictIn(BaseModel):
     verdict: str = Field(pattern="^(confirm|reject|unsure|explained|disputed)$")
     note: str | None = None
+    handle: str | None = None
 
 
 class EvidenceIn(BaseModel):
@@ -105,16 +111,13 @@ class CheckIn(BaseModel):
     original: str = Field(pattern="^(original|repost|unsure)$")
     shares_source_with: list[str] = []
     note: str | None = None
+    handle: str | None = None
 
 
 class AssessmentIn(BaseModel):
     handle: str
     stance: str = Field(pattern="^(agree|disagree|unsure)$")
     reason: str | None = None
-
-
-def is_reviewer(x_analyst_token: str | None = Header(default=None)) -> bool:
-    return x_analyst_token == settings.analyst_token
 
 
 @app.get("/health")
@@ -350,8 +353,8 @@ def post_comment(site_id: str, body: CommentIn) -> dict[str, Any]:
 
 
 @app.get("/sites/{site_id}/evidence")
-def get_evidence(site_id: str, reviewer: bool = Depends(is_reviewer)) -> list[dict[str, Any]]:
-    return list_evidence(site_id, reviewer_view=reviewer)
+def get_evidence(site_id: str) -> list[dict[str, Any]]:
+    return list_evidence(site_id, reviewer_view=True)  # a closed group sees everything
 
 
 @app.post("/sites/{site_id}/evidence")
@@ -363,7 +366,8 @@ def post_evidence(site_id: str, body: EvidenceIn) -> dict[str, Any]:
 
 
 @app.post("/evidence/{evidence_id}/check")
-def post_check(evidence_id: str, body: CheckIn, analyst: str = Depends(require_analyst)) -> dict[str, Any]:
+def post_check(evidence_id: str, body: CheckIn) -> dict[str, Any]:
+    analyst = require_handle(body.handle)
     try:
         return check_evidence(
             evidence_id, analyst, body.located, body.dated, body.original, body.shares_source_with, body.note
@@ -381,7 +385,8 @@ def post_assessment(site_id: str, body: AssessmentIn) -> dict[str, Any]:
 
 
 @app.post("/sites/{site_id}/verdict")
-def post_verdict(site_id: str, body: VerdictIn, analyst: str = Depends(require_analyst)) -> dict[str, Any]:
+def post_verdict(site_id: str, body: VerdictIn) -> dict[str, Any]:
+    analyst = require_handle(body.handle)
     try:
         return set_verdict(site_id, body.verdict, analyst, body.note)
     except VerdictError as exc:

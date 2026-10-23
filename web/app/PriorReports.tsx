@@ -86,15 +86,13 @@ export default function PriorReports({
 
   return (
     <section>
-      <h2 className="mb-1 text-[18px] font-semibold">Prior reports</h2>
-      <p className="muted mb-3 text-[12px] leading-snug">
-        Incidents documented by ACLED near this place and time, as ACLED recorded them. Check how precise each
-        location and date is before relying on the distance.
-      </p>
+      <h2 className="section-title">
+        Prior reports <span className="num text-[13px] font-normal">ACLED</span>
+      </h2>
 
       {search ? (
         <>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-black/20 px-3.5 py-2.5 text-[12px]">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 bg-[var(--accent-soft)] px-3.5 py-2.5 text-[12px]">
             <span className="muted leading-snug">
               Searched within {search.searched.radius_km} km, {day(search.searched.dates_searched[0])} –{" "}
               {day(search.searched.dates_searched[1])} (your dates and a month either side) · {search.searched_by} ·{" "}
@@ -103,24 +101,24 @@ export default function PriorReports({
             {controls}
           </div>
           {search.searched.source === "acled_sample" ? (
-            <p className="mb-3 rounded-lg border border-[#f5b34a]/50 px-3.5 py-2 text-[12px] text-[#f5b34a]">
+            <p className="mb-3 border border-[var(--accent)] px-3.5 py-2 text-[12px] text-[var(--accent)] font-semibold">
               Sample data: these records are fictional, for trying the interface. They are not ACLED data.
             </p>
           ) : null}
           {search.truncated ? (
-            <p className="mb-3 rounded-lg border border-[#f5b34a]/50 px-3.5 py-2 text-[12px] text-[#f5b34a]">
+            <p className="mb-3 border border-[var(--accent)] px-3.5 py-2 text-[12px] text-[var(--accent)] font-semibold">
               Too many results: some were left out. Search a smaller radius.
             </p>
           ) : null}
           {search.reports.length === 0 ? (
-            <p className="muted rounded-xl border border-dashed border-[var(--line)] px-4 py-6 text-center leading-snug">
+            <p className="muted border border-dashed border-[var(--line)] px-4 py-6 text-center leading-snug">
               No ACLED reports within {search.searched.radius_km} km at this time.
               <span className="faint block text-[12px]">
                 That isn&apos;t evidence nothing happened: ACLED only records what was reported.
               </span>
             </p>
           ) : (
-            <ul className="space-y-3">
+            <ul>
               {search.reports.map((report) => (
                 <ReportCard
                   key={report.source_id}
@@ -138,7 +136,7 @@ export default function PriorReports({
           )}
         </>
       ) : (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-[var(--line)] px-4 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-dashed border-[var(--line)] px-4 py-4">
           <span className="muted">Not searched yet. The place and dates are sent to ACLED.</span>
           {controls}
         </div>
@@ -152,7 +150,7 @@ function ReportCard({ report, added, onAdd }: { report: PriorReport; added: bool
   const place = [report.location, ...report.admin].filter(Boolean).join(", ");
   const kind = [report.event_type, report.sub_event_type].filter(Boolean).join(" › ");
   return (
-    <li className="rounded-xl border border-[var(--line)] p-4">
+    <li className="border-b border-[var(--line)] py-4">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div>
           <span className="text-[15px] font-semibold">{day(report.event_date)}</span>
@@ -172,7 +170,7 @@ function ReportCard({ report, added, onAdd }: { report: PriorReport; added: bool
         <dd>
           {report.time_precision_text ?? "precision not given"}
           {report.days_outside_window > 0 ? (
-            <span className="text-[#f5b34a]"> · {report.days_outside_window} days outside your dates</span>
+            <span className="text-[var(--accent)] font-semibold"> · {report.days_outside_window} days outside your dates</span>
           ) : null}
         </dd>
         {report.sources.length ? (

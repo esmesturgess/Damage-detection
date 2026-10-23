@@ -66,22 +66,22 @@ export default function TimeBar({
   if (start < 12) notes.push("Baseline starts before Sentinel-1 coverage; fewer prior scenes.");
 
   return (
-    <div className="panel on-brick pointer-events-auto px-5 pb-2 pt-3">
+    <div className="panel on-paper pointer-events-auto px-5 pb-2 pt-3">
       <div className="mb-1 flex items-baseline justify-between gap-4">
-        <span className="text-[15px] font-semibold">
+        <span className="display text-[20px] font-semibold">
           {label(start)} <span className="muted font-normal">→</span> {label(end)}
         </span>
         <span className="muted text-[12px]">compared with the 12 months before</span>
       </div>
       <div className="relative h-6">
-        <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-white/10" />
+        <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-[var(--line)]" />
         <div
-          className="absolute top-1/2 h-1 -translate-y-1/2 bg-[repeating-linear-gradient(45deg,#2a2d33_0_3px,transparent_3px_6px)]"
+          className="absolute top-1/2 h-1 -translate-y-1/2 bg-[repeating-linear-gradient(45deg,rgba(143,53,34,0.35)_0_3px,transparent_3px_6px)]"
           style={{ left: 0, width: `${pct(OPTICAL_FROM)}%` }}
           title="Radar only (no Sentinel-2 optical yet)"
         />
         <div
-          className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-[#f4efe6]"
+          className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-[var(--accent)]"
           style={{ left: `${pct(start)}%`, width: `${pct(end) - pct(start)}%` }}
         />
         <input
@@ -110,7 +110,7 @@ export default function TimeBar({
           </span>
         ))}
       </div>
-      {notes.length ? <div className="mt-1 text-[12px] text-[#f5b34a]">{notes.join(" · ")}</div> : null}
+      {notes.length ? <div className="mt-1 text-[12px] text-[var(--accent)] font-semibold">{notes.join(" · ")}</div> : null}
     </div>
   );
 }

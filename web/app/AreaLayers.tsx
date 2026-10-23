@@ -45,13 +45,13 @@ export default function AreaLayers({
   if (analysis.status === "idle" || analysis.status === "loading") {
     return (
       <p className="muted flex items-center gap-2">
-        <span className="h-2 w-2 animate-pulse rounded-full bg-[#f4efe6]" />
+        <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--accent)]" />
         Loading imagery for these dates…
       </p>
     );
   }
   if (analysis.status === "error") {
-    return <p className="text-[#ff6b4a]">{analysis.error}</p>;
+    return <p className="text-[var(--accent)] font-semibold">{analysis.error}</p>;
   }
 
   const { layers, optical, notes } = analysis.data;
@@ -84,7 +84,7 @@ export default function AreaLayers({
         rampLabels={["low", "severe"]}
       >
         Vegetation and roof loss consistent with fire.
-        {optical.provisional && optical.product ? <span className="text-[#ffd36a]"> Provisional imagery.</span> : null}
+        {optical.provisional && optical.product ? <span className="text-[var(--accent)]"> Provisional imagery.</span> : null}
       </LayerRow>
 
       <div>
@@ -112,7 +112,7 @@ export default function AreaLayers({
       </div>
 
       {tileTrouble ? (
-        <div className="flex items-center justify-between gap-2 rounded-lg bg-[#f5b34a]/10 px-3 py-2 text-[12px] text-[#f5b34a]">
+        <div className="flex items-center justify-between gap-2 bg-[var(--accent-soft)] px-3 py-2 text-[12px] text-[var(--accent)] font-semibold">
           <span>Earth Engine didn&apos;t render some tiles (busy or timed out).</span>
           <button className="btn shrink-0 px-2.5 py-1 text-[12px]" onClick={onRetry}>
             Retry
@@ -121,7 +121,7 @@ export default function AreaLayers({
       ) : null}
 
       {notes.map((n) => (
-        <p key={n} className="text-[12px] text-[#f5b34a]">
+        <p key={n} className="text-[12px] text-[var(--accent)] font-semibold">
           {n}
         </p>
       ))}

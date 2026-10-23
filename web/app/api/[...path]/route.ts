@@ -6,10 +6,6 @@ async function proxy(req: NextRequest, path: string[]) {
   const url = new URL(req.url);
   const target = `${API}/${path.join("/")}${url.search}`;
   const headers = new Headers();
-  const token = req.headers.get("x-analyst-token") ?? process.env.ANALYST_TOKEN;
-  if (token) headers.set("X-Analyst-Token", token);
-  const analyst = req.headers.get("x-analyst");
-  if (analyst) headers.set("X-Analyst", analyst);
   if (req.headers.get("content-type")) {
     headers.set("content-type", req.headers.get("content-type")!);
   }

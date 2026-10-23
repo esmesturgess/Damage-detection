@@ -110,8 +110,6 @@ export type Job = {
   error?: string | null;
 };
 
-export type Reviewer = { name: string; token: string; enabled: boolean };
-
 export const LEVELS: { id: Level; label: string; color: string; note: string }[] = [
   // Cream with a brick ring on the map: reads as "confirmed", not as burn red.
   { id: "verified", label: "Verified", color: "#f4efe6", note: "2+ independent sources, signed off by a second investigator" },

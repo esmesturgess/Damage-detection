@@ -2,25 +2,29 @@
 @import "maplibre-gl/dist/maplibre-gl.css";
 
 :root {
+  /* Manila paper, brick ink. The map keeps its dark satellite ground. */
+  --paper: #f6efc8;
+  --paper-deep: #efe5b8;
   --background: #050506;
-  --foreground: #ecebe4;
-  --muted: #a4a79d;
-  --faint: #6f7269;
-  --line: rgba(255, 255, 255, 0.09);
-  --panel: #121315;
-  --field: rgba(255, 255, 255, 0.05);
-  /* Brick red-brown: buttons and highlights only, never map meaning. */
-  --accent: #a8442f;
-  --accent-hover: #bb5139;
-  --accent-soft: rgba(168, 68, 47, 0.22);
-  --accent-text: #e58a72; /* readable brick for text on dark */
+  --foreground: #5e2416; /* brick-ink: body text */
+  --accent: #8f3522; /* brick: titles, rules, borders, buttons */
+  --accent-hover: #7a2c1c;
+  --accent-soft: rgba(143, 53, 34, 0.09);
+  --accent-text: #8f3522;
+  --muted: #845544;
+  --faint: #845544;
+  --line: rgba(143, 53, 34, 0.4);
+  --rule: #8f3522;
+  --field: #fbf7e2;
+  --panel: var(--paper);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-ibm);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-schibsted);
+  --font-mono: var(--font-courier);
+  --font-display: var(--font-newsreader);
 }
 
 html,
@@ -29,7 +33,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.45;
 }
 
@@ -40,17 +44,32 @@ button:disabled {
   cursor: default;
 }
 
-/* Shared building blocks, so every panel reads the same way. */
+/* Shared building blocks: square corners and ruled lines, like a case file. */
 .panel {
   background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--rule);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.display {
+  font-family: var(--font-display), Georgia, serif;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+}
+/* Section heading with a brick rule under it. */
+.section-title {
+  font-family: var(--font-display), Georgia, serif;
+  color: var(--accent);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.15;
+  border-bottom: 2px solid var(--rule);
+  padding-bottom: 4px;
+  margin-bottom: 12px;
 }
 .eyebrow {
   font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 10.5px;
-  letter-spacing: 0.14em;
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -69,16 +88,14 @@ button:disabled {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: 1px solid var(--rule);
   padding: 7px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--foreground);
-  transition: background 120ms, border-color 120ms;
+  background: transparent;
+  color: var(--accent);
+  transition: background 120ms;
 }
 .btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: var(--accent-soft);
 }
 .btn:disabled {
   opacity: 0.4;
@@ -86,50 +103,62 @@ button:disabled {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
-  font-weight: 600;
+  color: var(--paper);
+  font-weight: 700;
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
 }
 .btn-active {
-  border-color: var(--accent-text);
-  color: var(--accent-text);
+  background: var(--accent-soft);
+  font-weight: 700;
 }
 .field {
   width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: 1px solid var(--rule);
   padding: 7px 10px;
   background: var(--field);
   color: var(--foreground);
   outline: none;
 }
 .field:focus {
-  border-color: var(--accent-text);
+  box-shadow: inset 0 0 0 1px var(--rule);
 }
 .field::placeholder {
-  color: var(--faint);
+  color: var(--muted);
+  opacity: 0.8;
 }
 .seg {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--field);
+  border: 1px solid var(--rule);
 }
 .seg button {
-  border-radius: 6px;
-  padding: 4px 6px;
-  color: var(--muted);
+  padding: 5px 6px;
+  color: var(--accent);
+}
+.seg button + button {
+  border-left: 1px solid var(--rule);
 }
 .seg button[aria-pressed="true"] {
-  background: var(--accent-soft);
-  color: var(--accent-text);
+  background: var(--accent);
+  color: var(--paper);
+}
+/* A level label set like a rubber stamp: boxed, typewriter, level. */
+.stamp {
+  display: inline-block;
+  border: 3px solid var(--rule);
+  color: var(--accent);
+  padding: 8px 16px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.15;
 }
 
 /* Switch-style checkbox. */
@@ -140,7 +169,7 @@ button:disabled {
   width: 28px;
   height: 16px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--line);
   cursor: pointer;
   transition: background 120ms;
 }
@@ -152,7 +181,7 @@ button:disabled {
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  background: #ecebe4;
+  background: var(--paper);
   transition: transform 120ms;
 }
 .switch:checked {
@@ -196,7 +225,7 @@ button:disabled {
   width: 16px;
   height: 16px;
   border-radius: 999px;
-  background: #ecebe4;
+  background: var(--paper);
   border: 3px solid var(--accent);
   cursor: ew-resize;
 }
@@ -205,50 +234,25 @@ button:disabled {
   width: 16px;
   height: 16px;
   border-radius: 999px;
-  background: #ecebe4;
+  background: var(--paper);
   border: 3px solid var(--accent);
   cursor: ew-resize;
 }
 .range-thumb:focus-visible::-webkit-slider-thumb {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--accent);
 }
 
 .link {
-  color: var(--accent-text);
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .link:hover {
   text-decoration: underline;
 }
 
-/* Site overlay: full-screen brick, cream text. The shared tokens are
-   re-pointed so buttons, fields and switches read on brick. */
-.on-brick {
-  --brick-bg: #6a2a1d;
-  --muted: rgba(244, 239, 230, 0.74);
-  --faint: rgba(244, 239, 230, 0.52);
-  --line: rgba(255, 255, 255, 0.16);
-  --field: rgba(0, 0, 0, 0.22);
-  --accent-text: #ffd9cc;
-  --accent-soft: rgba(255, 255, 255, 0.14);
-  background: var(--brick-bg);
-  color: #f4efe6;
-}
-.on-brick .btn-primary {
-  background: #f4efe6;
-  border-color: #f4efe6;
-  color: #5a2318;
-}
-.on-brick .btn-primary:hover:not(:disabled) {
-  background: #fff;
-  border-color: #fff;
-}
-.on-brick .switch:checked {
-  background: #f4efe6;
-}
-.on-brick .switch:checked::after {
-  background: var(--brick-bg);
-}
-/* The site overlay sits on top of brick chrome, so it uses a deeper brick. */
-.overlay-brick {
-  --brick-bg: #57211a;
+/* Paper surfaces: the sidebar, time bar, dialogs and site pages. */
+.on-paper {
+  background: var(--paper);
+  color: var(--foreground);
 }
