@@ -34,6 +34,7 @@ from core.evidence import (
     verification,
 )
 from core.places import GazetteerMissing, search_places
+from core.scout import ScoutUnavailable, scouted_search
 from core.prior_reports import PriorReportsError, add_report_as_evidence, latest_search, search_prior_reports
 from core.pwtt import screen_for_change
 from core.seed import seed_demo, seed_demo_evidence
@@ -268,11 +269,15 @@ def get_place_name(lat: float, lon: float, area_km2: float | None = None) -> dic
 
 
 @app.get("/places/search")
-def get_place_search(q: str = Query(max_length=200), limit: int = 8) -> dict[str, Any]:
-    """Places whose name, or another spelling of it, is close to q. Searched locally; nothing is sent out."""
+def get_place_search(q: str = Query(max_length=200), limit: int = 8, scout: bool = False) -> dict[str, Any]:
+    """Places whose name, or another spelling of it, is close to q. Searched locally; nothing is sent out.
+
+    scout=true also asks the local spelling scout (Ollama) for other spellings and searches those.
+    """
+    limit = max(1, min(limit, 20))
     try:
-        return search_places(q, max(1, min(limit, 20)))
-    except GazetteerMissing as exc:
+        return scouted_search(q, limit) if scout else search_places(q, limit)
+    except (GazetteerMissing, ScoutUnavailable) as exc:
         raise HTTPException(503, str(exc)) from exc
 
 

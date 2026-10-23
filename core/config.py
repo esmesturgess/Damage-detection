@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     acled_password: SecretStr = SecretStr("")
     # Fictional ACLED-shaped records instead of the API, for building without access.
     acled_sample: bool = False
+    # Spelling scout: a local Ollama model that suggests other spellings of place names.
+    ollama_url: str = "http://localhost:11434"
+    scout_model: str = "gemma3:4b"
 
 
 settings = Settings()

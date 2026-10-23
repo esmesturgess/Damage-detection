@@ -134,6 +134,10 @@ class Gazetteer:
         self.phonetic_keys = phonetic_keys
 
     def search(self, query: str, limit: int = 8) -> list[dict[str, Any]]:
+        return [hit for _, hit in self.scored(query, limit)]
+
+    def scored(self, query: str, limit: int = 8) -> list[tuple[float, dict[str, Any]]]:
+        """Search results with their spelling similarity (0-100), for merging searches. Not shown to people."""
         q_plain, q_phon = plain(query), phonetic(query)
         if len(q_plain) < 2:
             return []
@@ -155,7 +159,8 @@ class Gazetteer:
             p = self.places[place_idx]
             return (-round(score / 3), -CLASS_RANK.get(p.feature_class, 0), -p.population, p.name)
 
-        return [self._describe(self.places[i], name) for i, (_, name) in sorted(best.items(), key=rank)[:limit]]
+        ranked = sorted(best.items(), key=rank)[:limit]
+        return [(score, self._describe(self.places[i], name)) for i, (score, name) in ranked]
 
     def _describe(self, p: Place, matched: str) -> dict[str, Any]:
         return {
