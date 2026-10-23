@@ -27,6 +27,10 @@ TRUE_COLOUR = {"bands": ["B4", "B3", "B2"], "min": 0, "max": 2500, "gamma": 1.2}
 CHANGE_VIS = {"min": 3, "max": 5, "palette": ["ffff00", "ff0000", "800080"]}
 # USGS dNBR severity classes, shown from "low" upwards.
 BURN_VIS = {"min": 0.1, "max": 0.66, "palette": ["fff7bc", "fec44f", "f03b20", "7f0000"]}
+# Water mask as in the paper: MNDWI (B3 green vs B11 SWIR) above this in both
+# composites. The scan's stable_water_fraction uses the same test.
+WATER_MNDWI = 0.12
+WATER_VIS = {"palette": ["3b7dd8"]}
 
 _TTL_S = 3600
 _cache: dict[str, tuple[float, dict[str, Any]]] = {}
@@ -122,6 +126,7 @@ def _images(aoi: dict[str, Any], baseline: dict[str, str], event: dict[str, str]
         images["after"] = post.visualize(**TRUE_COLOUR)
         dnbr = pre.normalizedDifference(["B8", "B12"]).subtract(post.normalizedDifference(["B8", "B12"]))
         images["burn"] = dnbr.updateMask(dnbr.gte(0.1)).visualize(**BURN_VIS)
+        images["water"] = stable_water(pre, post).selfMask().visualize(**WATER_VIS)
         optical_info = {
             "product": "L2A" if product == L2A else "L1C",
             "provisional": product == L1C,
@@ -134,6 +139,15 @@ def _images(aoi: dict[str, Any], baseline: dict[str, str], event: dict[str, str]
             notes.append("Burn layer uses Level-1C (top of atmosphere, no atmospheric correction), so its values are less reliable.")
 
     return {"images": images, "optical": optical_info, "notes": notes}
+
+
+def stable_water(pre, post):
+    """1 where both composites are water by MNDWI, else 0."""
+    return (
+        pre.normalizedDifference(["B3", "B11"]).gt(WATER_MNDWI)
+        .And(post.normalizedDifference(["B3", "B11"]).gt(WATER_MNDWI))
+        .rename("water")
+    )
 
 
 def clear_scenes(collection: str, region, start: str, end: str):

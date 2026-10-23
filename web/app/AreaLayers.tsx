@@ -1,9 +1,9 @@
 "use client";
 
-export type AreaLayerId = "before" | "after" | "burn" | "change";
+export type AreaLayerId = "before" | "after" | "water" | "burn" | "change";
 
 /** Map stacking order, bottom to top. */
-export const AREA_LAYERS: AreaLayerId[] = ["before", "after", "burn", "change"];
+export const AREA_LAYERS: AreaLayerId[] = ["before", "after", "water", "burn", "change"];
 
 type Window = { start: string; end: string };
 
@@ -29,6 +29,7 @@ export type Analysis =
 // Same palettes as CHANGE_VIS and BURN_VIS in core/imagery.py, weak to strong.
 const CHANGE_STEPS = ["#ffff00", "#ff8000", "#ff0000", "#c00040", "#800080"];
 const BURN_STEPS = ["#fff7bc", "#fec44f", "#f03b20", "#7f0000"];
+const WATER_STEPS = ["#3b7dd8"];
 
 export default function AreaLayers({
   analysis,
@@ -116,6 +117,22 @@ export default function AreaLayers({
           Shown from 0.1 (pale yellow, low severity) to 0.66 (dark red, high), the USGS severity classes. Harvest, land
           clearing and seasonal drying also raise it, and a 12-month &ldquo;before&rdquo; mixes seasons. This is the raw
           index, not the trained burn classifier.
+        </p>
+      </LayerRow>
+      <LayerRow
+        title="Water"
+        on={on.water}
+        disabled={!layers.water}
+        onToggle={(v) => onToggle("water", v)}
+        steps={WATER_STEPS}
+      >
+        <p>
+          Water mask used in the paper: the Modified Normalised Difference Water Index, MNDWI = (green − SWIR1) / (green +
+          SWIR1), from Sentinel-2 bands 3 and 11.
+        </p>
+        <p>
+          A pixel is water when MNDWI is above 0.12 in both the before and after composites, so it marks water that was
+          there throughout, not new flooding. The scan&apos;s standing-water reading uses the same test.
         </p>
       </LayerRow>
       {optical.provisional && optical.product ? (

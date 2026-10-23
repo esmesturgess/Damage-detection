@@ -126,6 +126,7 @@ export default function MapApp() {
   const [layerOn, setLayerOn] = useState<Record<AreaLayerId, boolean>>({
     before: false,
     after: true,
+    water: false,
     burn: false,
     change: true,
   });

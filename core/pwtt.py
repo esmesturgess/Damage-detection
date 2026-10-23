@@ -97,7 +97,7 @@ def run_scan(job_id: str, params: dict[str, Any]) -> dict[str, Any]:
     import ee
 
     from core._vendor import pwtt
-    from core.imagery import L1C, L2A, clear_scenes, pick_product
+    from core.imagery import L1C, L2A, clear_scenes, pick_product, stable_water
     from core.investigations import attach_to_investigations
 
     aoi, baseline, event = params["aoi"], params["baseline_window"], params["event_window"]
@@ -152,10 +152,7 @@ def run_scan(job_id: str, params: dict[str, Any]) -> dict[str, Any]:
         stack = (
             pre.normalizedDifference(["B8", "B12"]).subtract(post.normalizedDifference(["B8", "B12"])).rename("dnbr")
             .addBands(pre.normalizedDifference(["B11", "B12"]).subtract(post.normalizedDifference(["B11", "B12"])).rename("nbr2c"))
-            .addBands(
-                pre.normalizedDifference(["B3", "B11"]).gt(0.12)
-                .And(post.normalizedDifference(["B3", "B11"]).gt(0.12)).rename("water")
-            )
+            .addBands(stable_water(pre, post))
         )
         hotspots = stack.reduceRegions(
             collection=hotspots.map(lambda f: f.setGeometry(f.geometry().buffer(FEATURE_BUFFER_M))),
