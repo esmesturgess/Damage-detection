@@ -19,6 +19,7 @@ import {
 import { LEVELS, levelInfo, siteCentre, type Site } from "@/lib/types";
 import AreaLayers, { AREA_LAYERS, type AreaLayerId, type Analysis } from "./AreaLayers";
 import SiteOverlay from "./SiteOverlay";
+import PlaceSearch from "./PlaceSearch";
 import StartInvestigation from "./StartInvestigation";
 import Tour from "./Tour";
 import { mapTour, siteTour } from "./tours";
@@ -570,14 +571,11 @@ export default function MapApp() {
     goTo(EXAMPLE.lat, EXAMPLE.lon);
   }
 
-  function applyCoordinates() {
-    const [la, lo] = coordText.split(/[\s,]+/).filter(Boolean).map(Number);
-    if (!(Math.abs(la) <= 90 && Math.abs(lo) <= 180)) {
-      setProbeMsg("Type latitude, longitude, e.g. 20.82, 92.38");
-      return;
-    }
-    goTo(la, lo);
-  }
+  // Place search favours places near the middle of the map.
+  const mapCentre = useCallback(() => {
+    const c = mapRef.current?.getCenter();
+    return c ? { lat: c.lat, lon: c.lng } : null;
+  }, []);
 
   function goTo(la: number, lo: number) {
     const box = boxAround(la, lo, COORD_BOX_KM);
@@ -690,24 +688,7 @@ export default function MapApp() {
       {/* Controls, bottom right: area, layers, key. */}
       <section className={`${CHROME} on-paper absolute bottom-4 right-4 flex max-h-[calc(100%-140px)] w-[300px] flex-col overflow-auto border border-[var(--rule)]`}>
         <div className="border-b border-[var(--line)] p-3" data-tour="area">
-          <form
-            className="flex border border-[var(--rule)]"
-            onSubmit={(e) => {
-              e.preventDefault();
-              applyCoordinates();
-            }}
-          >
-            <input
-              className="num min-w-0 flex-1 bg-transparent px-2 py-1.5 text-[13px] outline-none placeholder:text-[var(--muted)]"
-              placeholder="lat, lon"
-              aria-label="Coordinates"
-              value={coordText}
-              onChange={(e) => setCoordText(e.target.value)}
-            />
-            <button className="border-l border-[var(--rule)] px-2.5" aria-label="Go to coordinates">
-              →
-            </button>
-          </form>
+          <PlaceSearch text={coordText} onText={setCoordText} onGo={goTo} near={mapCentre} />
           <button
             className={`btn mt-2 w-full ${drawing ? "btn-active" : ""}`}
             onClick={() => setDrawing(!drawing)}

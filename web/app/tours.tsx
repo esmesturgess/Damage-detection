@@ -28,7 +28,12 @@ export function mapTour(showExample: () => void): TourStep[] {
     {
       target: "area",
       title: "Choose where",
-      body: <p>Type coordinates (lat, lon), or press Draw a box and drag on the map. Esc cancels drawing.</p>,
+      body: (
+        <p>
+          Search a place by name (it copes with small spelling slips and favours places near where the map is looking), type
+          coordinates as lat, lon, or press Draw a box and drag on the map. Esc cancels drawing.
+        </p>
+      ),
     },
     {
       target: "layers",

@@ -5,7 +5,7 @@ from typing import Any
 
 import httpx
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -15,6 +15,7 @@ from core.config import settings
 from core.coverage import check_coverage
 from core.gee import GeeUnavailable
 from core.history import site_history
+from core.geocode import GeocodeError, search_places
 from core.investigations import (
     InvestigationError,
     find_overlaps,
@@ -258,6 +259,17 @@ class InvestigationIn(BaseModel):
     name_local: str | None = None
     question: str | None = None
     created_by: str | None = None
+
+
+@app.get("/places/search")
+def get_place_search(
+    q: str = Query(max_length=200), lat: float | None = None, lon: float | None = None
+) -> dict[str, Any]:
+    """Places matching q (OpenStreetMap, via Photon), nearest the given point first."""
+    try:
+        return search_places(q, lat, lon)
+    except GeocodeError as exc:
+        raise HTTPException(503, str(exc)) from exc
 
 
 @app.get("/places/name")
