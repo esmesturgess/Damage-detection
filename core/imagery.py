@@ -20,7 +20,11 @@ L1C = "COPERNICUS/S2_HARMONIZED"
 CLOUD_PROB = "COPERNICUS/S2_CLOUD_PROBABILITY"
 MAX_SCENE_CLOUD = 60  # scene-level filter before per-pixel masking
 MAX_PIXEL_CLOUD = 40  # s2cloudless probability above which a pixel is dropped
-POST_EXTENSION_DAYS = 90  # widen the after-window when it has no clear scene
+POST_EXTENSION_DAYS = 90
+# Every Sentinel-2 band the app reads: true colour (B4 B3 B2), NBR (B8 B12), NBR2 and
+# MNDWI (B11, B3). Selecting them in a fixed order also makes the collection uniform:
+# some archive scenes list their mask bands in a different order, which stops a median.
+S2_BANDS = ["B2", "B3", "B4", "B8", "B11", "B12"]  # widen the after-window when it has no clear scene
 
 TRUE_COLOUR = {"bands": ["B4", "B3", "B2"], "min": 0, "max": 2500, "gamma": 1.2}
 # Palettes match the keys in web/app/AreaLayers.tsx.
@@ -165,7 +169,9 @@ def clear_scenes(collection: str, region, start: str, end: str):
         scenes, probs, ee.Filter.equals(leftField="system:index", rightField="system:index")
     )
     return ee.ImageCollection(joined).map(
-        lambda img: img.updateMask(ee.Image(img.get("cloud")).select("probability").lt(MAX_PIXEL_CLOUD))
+        lambda img: img.select(S2_BANDS).updateMask(
+            ee.Image(img.get("cloud")).select("probability").lt(MAX_PIXEL_CLOUD)
+        )
     )
 
 

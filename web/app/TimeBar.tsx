@@ -73,7 +73,7 @@ export default function TimeBar({
         <span className="display text-[20px] font-semibold">
           {label(start)} <span className="muted font-normal">→</span> {label(end)}
         </span>
-        <span className="muted text-[12px]">compared with the 12 months before</span>
+        <span className="muted text-[13.5px]">compared with the 12 months before</span>
       </div>
       <div className="relative h-6">
         <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-[var(--line)]" />
@@ -105,14 +105,14 @@ export default function TimeBar({
           onChange={(e) => onChange(start, Math.max(Number(e.target.value), start))}
         />
       </div>
-      <div className="faint num relative h-4 text-[10.5px]">
+      <div className="faint num relative h-4 text-[13px]">
         {years.map((y) => (
           <span key={y} className="absolute -translate-x-1/2" style={{ left: `${pct(monthIndex(y, 0))}%` }}>
             {y}
           </span>
         ))}
       </div>
-      {notes.length ? <div className="mt-1 text-[12px] font-semibold">{notes.join(" · ")}</div> : null}
+      {notes.length ? <div className="mt-1 text-[13.5px] font-semibold">{notes.join(" · ")}</div> : null}
     </div>
   );
 }

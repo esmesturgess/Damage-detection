@@ -74,7 +74,7 @@ export default function PlaceSearch({
         }}
       >
         <input
-          className="min-w-0 flex-1 bg-transparent px-2 py-1.5 text-[13px] outline-none placeholder:text-[var(--muted)]"
+          className="min-w-0 flex-1 bg-transparent px-2 py-1.5 text-[14px] outline-none placeholder:text-[var(--muted)]"
           placeholder="Search a place, or lat, lon"
           aria-label="Search a place or enter coordinates"
           value={text}
@@ -89,7 +89,7 @@ export default function PlaceSearch({
         </button>
       </form>
       {open && isName ? (
-        <div className="mt-1.5 text-[12px]">
+        <div className="mt-1.5 text-[13.5px]">
           {error ? <p className="font-semibold">{error}</p> : null}
           <ul className="max-h-52 overflow-auto">
             {hits.map((h) => (
@@ -98,14 +98,14 @@ export default function PlaceSearch({
                   className="block w-full border-b border-[var(--line)] px-1 py-1.5 text-left hover:bg-[var(--accent-soft)]"
                   onClick={() => pick(h)}
                 >
-                  <span className="text-[13px] font-semibold">{h.name}</span>
+                  <span className="text-[14px] font-semibold">{h.name}</span>
                   <span className="muted"> · {h.kind}</span>
                   {h.within ? <span className="muted block">{h.within}</span> : null}
                 </button>
               </li>
             ))}
           </ul>
-          <p className="faint mt-1 text-[11px]">Photon · © OpenStreetMap contributors</p>
+          <p className="faint mt-1 text-[13px]">Photon · © OpenStreetMap contributors</p>
         </div>
       ) : null}
     </div>

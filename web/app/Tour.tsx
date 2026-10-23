@@ -157,7 +157,7 @@ export default function Tour({ steps, onClose }: { steps: TourStep[]; onClose: (
           <h2 className="display mb-2 text-[22px] font-semibold leading-tight">{step.title}</h2>
           <div className="space-y-2 text-[14px] leading-snug">{step.body}</div>
           <div className="mt-4 flex items-center gap-2">
-            <button className="link mr-auto text-[12px]" onClick={onClose}>
+            <button className="link mr-auto text-[13.5px]" onClick={onClose}>
               {last ? "Close" : "Skip tour"}
             </button>
             {index > 0 ? (

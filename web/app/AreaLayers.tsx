@@ -46,14 +46,14 @@ export default function AreaLayers({
 }) {
   if (analysis.status === "idle" || analysis.status === "loading") {
     return (
-      <p className="muted flex items-center gap-2 text-[12px]">
+      <p className="muted flex items-center gap-2 text-[13.5px]">
         <span className="h-2 w-2 animate-pulse bg-[var(--accent)]" />
         Loading imagery for these dates…
       </p>
     );
   }
   if (analysis.status === "error") {
-    return <p className="text-[12px] font-semibold">{analysis.error}</p>;
+    return <p className="text-[13.5px] font-semibold">{analysis.error}</p>;
   }
 
   const { layers, optical, notes } = analysis.data;
@@ -136,12 +136,12 @@ export default function AreaLayers({
         </p>
       </LayerRow>
       {optical.provisional && optical.product ? (
-        <p className="muted text-[12px]">Burn signal from Level-1C imagery: less reliable.</p>
+        <p className="muted text-[13.5px]">Burn signal from Level-1C imagery: less reliable.</p>
       ) : null}
 
       <div className="flex items-center gap-2">
         <span className="flex-1">Photo</span>
-        <div className="seg text-[12px]">
+        <div className="seg text-[13.5px]">
           {(["off", "before", "after"] as const).map((v) => (
             <button
               key={v}
@@ -156,7 +156,7 @@ export default function AreaLayers({
         </div>
       </div>
       {trueColour !== "off" ? (
-        <p className="faint num -mt-1 text-right text-[11px]">
+        <p className="faint num -mt-1 text-right text-[13px]">
           {trueColour === "before"
             ? scenes(optical.before_window, optical.pre_scenes)
             : scenes(optical.after_window, optical.post_scenes)}
@@ -164,7 +164,7 @@ export default function AreaLayers({
       ) : null}
 
       {tileTrouble ? (
-        <div className="flex items-center justify-between gap-2 text-[12px] font-semibold">
+        <div className="flex items-center justify-between gap-2 text-[13.5px] font-semibold">
           <span>Earth Engine didn&apos;t render some tiles.</span>
           <button className="link shrink-0" onClick={onRetry}>
             Retry
@@ -173,7 +173,7 @@ export default function AreaLayers({
       ) : null}
 
       {notes.map((n) => (
-        <p key={n} className="text-[12px] font-semibold">
+        <p key={n} className="text-[13.5px] font-semibold">
           {n}
         </p>
       ))}
@@ -213,7 +213,7 @@ function LayerRow({
         ))}
       </span>
       </label>
-      <details className="mt-0.5 pl-[21px] text-[12px]">
+      <details className="mt-0.5 pl-[21px] text-[13.5px]">
         <summary className="link cursor-pointer list-none">How it&apos;s calculated</summary>
         <div className="mt-1.5 space-y-1.5 leading-snug">{children}</div>
       </details>

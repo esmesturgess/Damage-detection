@@ -70,7 +70,7 @@ export default function PriorReports({
 
   const controls = (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="muted text-[12px]">within</span>
+      <span className="muted text-[13.5px]">within</span>
       <div className="seg">
         {RADII.map((km) => (
           <button key={km} aria-pressed={radius === km} onClick={() => setRadius(km)}>
@@ -87,12 +87,12 @@ export default function PriorReports({
   return (
     <section>
       <h2 className="section-title">
-        Prior reports <span className="num text-[13px] font-normal">ACLED</span>
+        Prior reports <span className="num text-[14px] font-normal">ACLED</span>
       </h2>
 
       {search ? (
         <>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 bg-[var(--accent-soft)] px-3.5 py-2.5 text-[12px]">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 bg-[var(--accent-soft)] px-3.5 py-2.5 text-[13.5px]">
             <span className="muted leading-snug">
               Searched within {search.searched.radius_km} km, {day(search.searched.dates_searched[0])} –{" "}
               {day(search.searched.dates_searched[1])} · {search.searched_by} ·{" "}
@@ -101,12 +101,12 @@ export default function PriorReports({
             {controls}
           </div>
           {search.searched.source === "acled_sample" ? (
-            <p className="mb-3 border border-[var(--accent)] px-3.5 py-2 text-[12px] text-[var(--accent)] font-semibold">
+            <p className="mb-3 border border-[var(--accent)] px-3.5 py-2 text-[13.5px] text-[var(--accent)] font-semibold">
               Sample data, not ACLED records.
             </p>
           ) : null}
           {search.truncated ? (
-            <p className="mb-3 border border-[var(--accent)] px-3.5 py-2 text-[12px] text-[var(--accent)] font-semibold">
+            <p className="mb-3 border border-[var(--accent)] px-3.5 py-2 text-[13.5px] text-[var(--accent)] font-semibold">
               Some results left out. Search a smaller radius.
             </p>
           ) : null}
@@ -153,14 +153,14 @@ function ReportCard({ report, added, onAdd }: { report: PriorReport; added: bool
           <span className="text-[15px] font-semibold">{day(report.event_date)}</span>
           <span className="muted"> · {place || "unnamed place"}</span>
         </div>
-        <span className="num text-[13px]">
+        <span className="num text-[14px]">
           {report.distance_km === 0 ? "inside the area" : `${report.distance_km} km away`}
         </span>
       </div>
       {kind ? <div className="eyebrow mb-1.5 normal-case tracking-normal">{kind}</div> : null}
       {report.notes ? <p className="mb-3 leading-snug">{report.notes}</p> : null}
 
-      <dl className="mb-3 grid gap-x-4 gap-y-1.5 text-[12px] sm:grid-cols-[auto_1fr]">
+      <dl className="mb-3 grid gap-x-4 gap-y-1.5 text-[13.5px] sm:grid-cols-[auto_1fr]">
         <dt className="faint">Location</dt>
         <dd>{report.geo_precision_text ?? "precision not given"}</dd>
         <dt className="faint">Date</dt>
@@ -191,11 +191,11 @@ function ReportCard({ report, added, onAdd }: { report: PriorReport; added: bool
       </dl>
 
       <div className="flex items-center justify-between gap-3">
-        <span className="faint num text-[11px]">
+        <span className="faint num text-[13px]">
           {report.source === "acled_sample" ? "Sample" : "ACLED"} {report.source_id}
         </span>
         {added ? (
-          <span className="muted text-[12px]">Added as evidence</span>
+          <span className="muted text-[13.5px]">Added as evidence</span>
         ) : (
           <button
             className="btn px-3 py-1.5"

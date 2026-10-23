@@ -71,7 +71,7 @@ button:disabled {
 }
 .eyebrow {
   font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -86,6 +86,7 @@ button:disabled {
 .num {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
+  font-weight: 500;
 }
 .btn {
   display: inline-flex;
@@ -270,7 +271,7 @@ button:disabled {
   --rule: rgba(241, 233, 207, 0.75);
   --field: rgba(0, 0, 0, 0.18);
 }
-/* Trial: black ground, red type. Swap CHROME in lib/look.ts to go back. */
+/* Black ground, red type: the default look (CHROME in lib/look.ts). */
 .chrome.chrome-black {
   --paper: #0e0d0c;
   --foreground: #e0533a;

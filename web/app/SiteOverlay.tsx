@@ -140,7 +140,7 @@ export default function SiteOverlay({
     >
       <div className={`${CHROME} on-paper relative h-full overflow-auto border border-[var(--rule)] shadow-2xl`}>
         {/* Case-file tab strip */}
-        <div className="num flex flex-wrap items-stretch border-b-2 border-[var(--rule)] text-[13px] tracking-[0.04em]">
+        <div className="num flex flex-wrap items-stretch border-b-2 border-[var(--rule)] text-[14px] tracking-[0.04em]">
           <span className="bg-[var(--accent)] px-5 py-3 font-bold uppercase text-[var(--paper)]">
             {isInvestigation ? "Investigation" : "Hot-spot"}
           </span>
@@ -182,13 +182,13 @@ export default function SiteOverlay({
               {site.question ? (
                 <>
                   <p className="display mt-5 text-[21px] italic leading-snug text-[var(--foreground)]">“{site.question}”</p>
-                  {site.created_by ? <p className="muted mt-1 text-[13px]">asked by {site.created_by}</p> : null}
+                  {site.created_by ? <p className="muted mt-1 text-[14px]">asked by {site.created_by}</p> : null}
                 </>
               ) : null}
             </div>
             <div className="stamp mt-2" title={v.why} data-tour="stamp">
               {info.label}
-              <div className="text-[11px] font-normal tracking-[0.06em] normal-case">{stampNote}</div>
+              <div className="text-[13px] font-normal tracking-[0.06em] normal-case">{stampNote}</div>
             </div>
           </div>
           <dl className="mt-7 grid grid-cols-2 border border-[var(--rule)] sm:grid-cols-4" data-tour="facts">
@@ -316,7 +316,7 @@ export default function SiteOverlay({
                   return (
                     <div key={step} className="flex-1">
                       <div className={`mb-1.5 h-2.5 border border-[var(--rule)] ${reached ? "bg-[var(--accent)]" : ""}`} />
-                      <span className="text-[12px]">{levelInfo(step).label}</span>
+                      <span className="text-[13.5px]">{levelInfo(step).label}</span>
                     </div>
                   );
                 })}
@@ -354,7 +354,7 @@ export default function SiteOverlay({
                 </div>
               </section>
 
-            {site.is_demo ? <p className="faint text-[12px]">Demo data</p> : null}
+            {site.is_demo ? <p className="faint text-[13.5px]">Demo data</p> : null}
           </aside>
         </div>
 
@@ -445,8 +445,8 @@ function SiteImagery({ siteId }: { siteId: string }) {
             />
             {/* eslint-enable @next/next/no-img-element */}
             <div className="pointer-events-none absolute inset-y-0 w-0.5 bg-white shadow" style={{ left: `${split}%` }} />
-            <span className="absolute left-3 top-3 rounded bg-black/60 px-2 py-0.5 text-[12px] text-[#f1e9cf]">Before</span>
-            <span className="absolute right-3 top-3 rounded bg-black/60 px-2 py-0.5 text-[12px] text-[#f1e9cf]">After</span>
+            <span className="absolute left-3 top-3 rounded bg-black/60 px-2 py-0.5 text-[13.5px] text-[#f1e9cf]">Before</span>
+            <span className="absolute right-3 top-3 rounded bg-black/60 px-2 py-0.5 text-[13.5px] text-[#f1e9cf]">After</span>
             <input
               aria-label="Compare before and after"
               type="range"
@@ -467,7 +467,7 @@ function SiteImagery({ siteId }: { siteId: string }) {
           </div>
         )}
         {caption ? (
-          <span className="num absolute bottom-3 left-3 rounded bg-black/60 px-2 py-0.5 text-[12px] text-[#f1e9cf]">
+          <span className="num absolute bottom-3 left-3 rounded bg-black/60 px-2 py-0.5 text-[13.5px] text-[#f1e9cf]">
             {caption.start} → {caption.end}
           </span>
         ) : null}
@@ -484,7 +484,7 @@ function SiteImagery({ siteId }: { siteId: string }) {
         ))}
       </div>
       {current?.data?.notes.map((n) => (
-        <p key={n} className="muted mt-2 text-[12px]">
+        <p key={n} className="muted mt-2 text-[13.5px]">
           {n}
         </p>
       ))}
@@ -528,7 +528,7 @@ function HotspotList({ hotspots, onOpen }: { hotspots: Site[]; onOpen: (id: stri
                     Radar change <span className="num">{h.pwtt_z?.toFixed(1) ?? "—"}</span>
                     <span className="muted"> · {levelInfo(h.verification.level).label.toLowerCase()}</span>
                   </span>
-                  <span className="muted num text-[12px]">
+                  <span className="muted num text-[13.5px]">
                     {feat.hotspot_area_ha != null ? `${Number(feat.hotspot_area_ha).toFixed(1)} ha` : ""}
                     {feat.p95_dnbr != null ? ` · burn ${Number(feat.p95_dnbr).toFixed(2)}` : ""}
                   </span>
@@ -539,7 +539,7 @@ function HotspotList({ hotspots, onOpen }: { hotspots: Site[]; onOpen: (id: stri
           })}
         </ol>
       )}
-      {hotspots.length > 12 ? <p className="faint mt-2 text-[12px]">and {hotspots.length - 12} more on the map</p> : null}
+      {hotspots.length > 12 ? <p className="faint mt-2 text-[13.5px]">and {hotspots.length - 12} more on the map</p> : null}
     </section>
   );
 }
@@ -560,7 +560,7 @@ function SiteHistory({ siteId, version }: { siteId: string; version: number }) {
 
   return (
     <section className="border-t-2 border-[var(--rule)] px-8 py-7 lg:px-12">
-      <h2 className="display mb-4 text-[26px] font-semibold">History</h2>
+      <h2 className="section-title">History</h2>
       {events.length === 0 ? (
         <p className="muted">No recorded activity yet.</p>
       ) : (
@@ -569,7 +569,7 @@ function SiteHistory({ siteId, version }: { siteId: string; version: number }) {
           {events.map((e, i) => (
             <li key={i} className="relative w-48 shrink-0">
               <span className="relative mb-3 block h-[11px] w-[11px] rounded-full border-2 border-[var(--paper)] bg-[var(--accent)]" />
-              <div className="faint num text-[12px]">{e.at.slice(0, 16).replace("T", " ")}</div>
+              <div className="faint num text-[13.5px]">{e.at.slice(0, 16).replace("T", " ")}</div>
               <div className="leading-snug">{e.summary}</div>
             </li>
           ))}
@@ -596,9 +596,9 @@ function SatelliteReading({ site }: { site: Site }) {
           </div>
         ))}
       </dl>
-      {site.optical_read === "cloud_gap" ? <p className="muted mt-2 text-[12px]">No clear optical image: no burn readings.</p> : null}
+      {site.optical_read === "cloud_gap" ? <p className="muted mt-2 text-[13.5px]">No clear optical image: no burn readings.</p> : null}
       {site.calibration_status === "provisional" ? (
-        <p className="muted mt-2 text-[12px]">Burn readings provisional outside Rakhine.</p>
+        <p className="muted mt-2 text-[13.5px]">Burn readings provisional outside Rakhine.</p>
       ) : null}
     </section>
   );
@@ -689,7 +689,7 @@ function EvidenceItem({
           {item.kind === "link" ? "Link" : item.kind === "prior_report" ? `Prior report · ${item.record?.source === "acled_sample" ? "sample" : "ACLED"}` : "Testimony"}
           {item.is_demo ? " · demo" : ""}
         </span>
-        <span className={`border border-[var(--rule)] px-1.5 text-[10.5px] text-[var(--accent)] ${c ? "" : "border-dashed"}`}>
+        <span className={`border border-[var(--rule)] px-1.5 text-[13px] text-[var(--accent)] ${c ? "" : "border-dashed"}`}>
           {c ? "Checked" : "Unchecked"}
         </span>
       </div>
@@ -699,7 +699,7 @@ function EvidenceItem({
         </a>
       ) : null}
       {item.body ? <p className="whitespace-pre-wrap leading-snug">{item.body}</p> : null}
-      <div className="mt-1.5 text-[12px]">
+      <div className="mt-1.5 text-[13.5px]">
         {c ? (
           <span className="muted">
             Located {MARK[c.located]} · Dated {MARK[c.dated]} · {c.original}
@@ -710,7 +710,7 @@ function EvidenceItem({
           <span className="muted">Awaiting a colleague&apos;s check</span>
         )}
       </div>
-      <button className="link mt-1.5 text-[12px]" onClick={() => setOpen(!open)}>
+      <button className="link mt-1.5 text-[13.5px]" onClick={() => setOpen(!open)}>
         {open ? "Cancel" : c ? "Re-check" : "Check this item"}
       </button>
       {open ? (
@@ -741,7 +741,7 @@ function CheckForm({
   const [shares, setShares] = useState<string[]>([]);
   const [note, setNote] = useState("");
   return (
-    <div className="mt-3 space-y-2.5 border-t border-[var(--line)] pt-3 text-[12px]">
+    <div className="mt-3 space-y-2.5 border-t border-[var(--line)] pt-3 text-[13.5px]">
       <Choice label="Located against imagery?" value={located} options={["yes", "no", "unsure"]} onChange={setLocated} />
       <Choice label="Date fits the window?" value={dated} options={["yes", "no", "unsure"]} onChange={setDated} />
       <Choice label="Source" value={original} options={["original", "repost", "unsure"]} onChange={setOriginal} />
@@ -844,7 +844,7 @@ function AddEvidence({
         value={handle}
         onChange={(e) => onHandle(e.target.value)}
       />
-      <p className="muted text-[12px] leading-snug">
+      <p className="muted text-[13.5px] leading-snug">
         No names or faces of people at risk.
       </p>
       <div className="flex gap-2">

@@ -41,7 +41,7 @@ function Post({ author, at, children }: { author: string; at: string; children: 
   return (
     <li className="relative border-l-2 border-[var(--line)] pb-4 pl-4 last:pb-1">
       <span className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[var(--accent)]" aria-hidden />
-      <div className="mb-0.5 text-[12px]">
+      <div className="mb-0.5 text-[13.5px]">
         <span className="font-semibold">{author}</span>
         <span className="faint num"> · {when(at)}</span>
       </div>
@@ -65,16 +65,16 @@ export function EvidenceComments({
   const [open, setOpen] = useState(false);
   return (
     <div className="mt-2 border-t border-[var(--line)] pt-2">
-      <button className="link text-[12px]" onClick={() => setOpen(!open)}>
+      <button className="link text-[13.5px]" onClick={() => setOpen(!open)}>
         {open ? "Hide comments" : comments.length ? `${comments.length} comment${comments.length === 1 ? "" : "s"}` : "Comment"}
       </button>
       {open ? (
         <div className="mt-2 space-y-2.5">
           {comments.map((c) => (
-            <div key={c.id} className="text-[12px]">
+            <div key={c.id} className="text-[13.5px]">
               <span className="font-semibold">{c.author}</span>
               <span className="faint num"> · {when(c.created_at)}</span>
-              <p className="whitespace-pre-wrap text-[13px] leading-snug">{c.body}</p>
+              <p className="whitespace-pre-wrap text-[14px] leading-snug">{c.body}</p>
             </div>
           ))}
           <Composer handle={handle} onHandle={onHandle} onPost={onPost} placeholder="Comment on this item" compact />
@@ -110,7 +110,7 @@ function Composer({
       />
       <div className="flex items-center gap-2">
         {named && handle.trim() ? (
-          <span className="muted flex-1 text-[12px]">
+          <span className="muted flex-1 text-[13.5px]">
             as <span className="font-semibold text-[var(--foreground)]">{handle}</span>{" "}
             <button className="link" onClick={() => setNamed(false)}>
               change

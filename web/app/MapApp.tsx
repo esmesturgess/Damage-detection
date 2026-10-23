@@ -690,7 +690,7 @@ export default function MapApp() {
       </div>
 
       {/* Controls, bottom right: area, layers, key. */}
-      <section className={`${CHROME} on-paper absolute bottom-4 right-4 flex max-h-[calc(100%-140px)] w-[300px] flex-col overflow-auto border border-[var(--rule)]`}>
+      <section className={`${CHROME} on-paper absolute bottom-4 right-4 flex max-h-[calc(100%-140px)] w-[330px] flex-col overflow-auto border border-[var(--rule)]`}>
         <div className="border-b border-[var(--line)] p-3" data-tour="area">
           <PlaceSearch text={coordText} onText={setCoordText} onGo={goTo} near={mapCentre} />
           <button
@@ -699,9 +699,9 @@ export default function MapApp() {
           >
             {drawing ? "Cancel drawing" : aoi ? "Draw a new box" : "Draw a box"}
           </button>
-          {drawing ? <p className="muted mt-2 text-[12px]">Drag to draw. Esc cancels.</p> : null}
+          {drawing ? <p className="muted mt-2 text-[13.5px]">Drag to draw. Esc cancels.</p> : null}
           {aoi && !drawing ? (
-            <div className="mt-2 flex justify-between text-[12px]">
+            <div className="mt-2 flex justify-between text-[13.5px]">
               <button className="link" onClick={runScan} disabled={scanStatus === "scanning"} data-tour="scan-link">
                 {scanStatus === "scanning" ? "Scanning…" : scanStatus === "done" ? "Scan again" : "Scan for change"}
               </button>
@@ -710,8 +710,8 @@ export default function MapApp() {
               </button>
             </div>
           ) : null}
-          {probeMsg ? <p className="muted mt-2 text-[12px] leading-snug">{probeMsg}</p> : null}
-          {error ? <p className="mt-2 text-[12px] font-semibold">{error}</p> : null}
+          {probeMsg ? <p className="muted mt-2 text-[13.5px] leading-snug">{probeMsg}</p> : null}
+          {error ? <p className="mt-2 text-[13.5px] font-semibold">{error}</p> : null}
         </div>
 
         {aoi ? (
@@ -733,7 +733,7 @@ export default function MapApp() {
           </div>
         ) : null}
 
-        <div className="p-3 text-[13px]" data-tour="legend">
+        <div className="p-3 text-[14px]" data-tour="legend">
           <ul className="mb-2 flex flex-wrap gap-x-3.5 gap-y-1">
             {LEVELS.filter((l) => l.id !== "ruled_out" && (l.id !== "disputed" || counts.disputed)).map((l) => (
               <li
@@ -746,7 +746,7 @@ export default function MapApp() {
               </li>
             ))}
           </ul>
-          <div className="muted flex gap-4 text-[12px]">
+          <div className="muted flex gap-4 text-[13.5px]">
             <label className="flex cursor-pointer items-center gap-1.5">
               <input
                 type="checkbox"
@@ -768,7 +768,7 @@ export default function MapApp() {
               </label>
             ) : null}
           </div>
-          <div className="mt-2 flex items-baseline justify-between gap-3 text-[12px]">
+          <div className="mt-2 flex items-baseline justify-between gap-3 text-[13.5px]">
             <span className="faint">
               {outsideDates ? `${outsideDates} ${outsideDates === 1 ? "site" : "sites"} outside these dates` : null}
             </span>

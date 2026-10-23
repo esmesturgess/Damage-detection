@@ -97,7 +97,7 @@ export default function StartInvestigation({
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2 className="display mb-1 text-[30px] font-semibold leading-none">New investigation</h2>
-            <p className="muted num text-[13px]">
+            <p className="muted num text-[14px]">
               {win.event.start} → {win.event.end} · {km2.toFixed(0)} km² around {lat.toFixed(3)}°N {lon.toFixed(3)}°E
             </p>
           </div>
@@ -108,18 +108,18 @@ export default function StartInvestigation({
 
         <div className="mb-4 grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="muted mb-1 block text-[12px]">Place (English)</span>
+            <span className="muted mb-1 block text-[13.5px]">Place (English)</span>
             <input className="field" value={name} placeholder="Looking up…" onChange={(e) => setName(e.target.value)} />
           </label>
           <label className="block">
-            <span className="muted mb-1 block text-[12px]">Place (local name)</span>
+            <span className="muted mb-1 block text-[13.5px]">Place (local name)</span>
             <input className="field" value={nameLocal} onChange={(e) => setNameLocal(e.target.value)} />
           </label>
         </div>
-        {context ? <p className="faint -mt-2 mb-4 text-[12px]">{context} · from OpenStreetMap</p> : null}
+        {context ? <p className="faint -mt-2 mb-4 text-[13.5px]">{context} · from OpenStreetMap</p> : null}
 
         <label className="mb-5 block">
-          <span className="muted mb-1 block text-[12px]">Question (optional)</span>
+          <span className="muted mb-1 block text-[13.5px]">Question (optional)</span>
           <textarea
             className="field h-20"
             placeholder="e.g. Were villages east of town burned in late August?"
@@ -141,7 +141,7 @@ export default function StartInvestigation({
                   <span className="min-w-0 flex-1 truncate">
                     {o.name}
                     {o.name_local ? <span className="muted"> · {o.name_local}</span> : null}
-                    <span className="faint num text-[12px]"> {o.event_window[0]} → {o.event_window[1]}</span>
+                    <span className="faint num text-[13.5px]"> {o.event_window[0]} → {o.event_window[1]}</span>
                   </span>
                   <button className="btn px-3 py-1" onClick={() => onOpen(o.id, false)}>
                     Join
