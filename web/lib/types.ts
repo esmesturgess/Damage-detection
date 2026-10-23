@@ -46,13 +46,49 @@ export type EvidenceCheck = {
 
 export type Evidence = {
   id: string;
-  kind: "link" | "testimony";
+  kind: "link" | "testimony" | "prior_report";
   visibility: "public" | "reviewers";
   url: string | null;
   body: string | null;
+  /** For prior_report items: the record as the source returned it. */
+  record: PriorReport | null;
   is_demo: boolean;
   created_at: string;
   check: EvidenceCheck | null;
+};
+
+/** A documented incident from ACLED, as recorded. Never scored or judged. */
+export type PriorReport = {
+  source: "acled" | "acled_sample";
+  source_id: string;
+  event_date: string;
+  days_outside_window: number;
+  time_precision: number | null;
+  time_precision_text: string | null;
+  latitude: number;
+  longitude: number;
+  distance_km: number;
+  geo_precision: number | null;
+  geo_precision_text: string | null;
+  location: string | null;
+  admin: string[];
+  country: string | null;
+  event_type: string | null;
+  sub_event_type: string | null;
+  actors: string[];
+  fatalities: number | null;
+  notes: string | null;
+  sources: string[];
+};
+
+export type PriorReportSearch = {
+  search_id: string;
+  searched: { source: string; radius_km: number; dates: [string, string]; dates_searched: [string, string] };
+  searched_by: string;
+  searched_at: string;
+  truncated: boolean;
+  count: number;
+  reports: PriorReport[];
 };
 
 export type Job = {

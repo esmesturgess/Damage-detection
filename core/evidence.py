@@ -22,7 +22,7 @@ from typing import Any
 
 from core.db import audit, new_id, row_to_dict, session, utcnow
 
-KINDS = {"link", "testimony"}
+KINDS = {"link", "testimony", "prior_report"}
 VISIBILITY = {"public", "reviewers"}
 YES_NO = {"yes", "no", "unsure"}
 ORIGINALITY = {"original", "repost", "unsure"}
@@ -41,6 +41,8 @@ def add_evidence(
     url: str | None = None,
     body: str | None = None,
     visibility: str = "public",
+    record: dict[str, Any] | None = None,
+    is_demo: bool = False,
 ) -> dict[str, Any]:
     if kind not in KINDS:
         raise EvidenceError(f"kind must be one of {sorted(KINDS)}")
@@ -52,6 +54,8 @@ def add_evidence(
         raise EvidenceError("a link needs an http(s) URL")
     if kind == "testimony" and not body:
         raise EvidenceError("testimony needs text")
+    if kind == "prior_report" and not (record and body):
+        raise EvidenceError("a prior report is added from a saved search (core.prior_reports)")
     if (url and len(url) > 2_000) or (body and len(body) > MAX_TEXT):
         raise EvidenceError("evidence is too long")
     handle = (submitted_by or "").strip()[:64] or "anonymous"
@@ -62,10 +66,10 @@ def add_evidence(
         eid = new_id("evd")
         conn.execute(
             """
-            INSERT INTO evidence (id, site_id, kind, url, body, visibility, submitted_by, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO evidence (id, site_id, kind, url, body, visibility, submitted_by, record_json, is_demo, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (eid, site_id, kind, url, body, visibility, handle, utcnow()),
+            (eid, site_id, kind, url, body, visibility, handle, json.dumps(record) if record else None, int(is_demo), utcnow()),
         )
         # The audit log records that evidence arrived, not who sent it.
         audit(conn, "public", "evidence_added", "site", site_id, {"evidence_id": eid, "kind": kind})
@@ -160,6 +164,7 @@ def list_evidence(site_id: str, reviewer_view: bool = False) -> list[dict[str, A
                 "visibility": item["visibility"],
                 "url": None if hidden else item["url"],
                 "body": None if hidden else item["body"],
+                "record": None if hidden else item.get("record"),
                 "is_demo": bool(item["is_demo"]),
                 "created_at": item["created_at"],
                 "check": None

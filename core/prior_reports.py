@@ -94,6 +94,11 @@ class AcledClient:
             r = self._http.get(READ_URL, params=params, headers=self._auth_header())
         if r.status_code == 401:
             raise PriorReportsError("ACLED refused the credentials.")
+        if r.status_code == 403:
+            raise PriorReportsError(
+                "Your ACLED account has no API access (ACLED's Open tier has none). "
+                "Ask access@acleddata.com for Research access."
+            )
         r.raise_for_status()
         data = r.json()
         if data.get("success") is False or (data.get("status") not in (None, 200)):
@@ -137,13 +142,64 @@ class AcledClient:
         self._refresh_after = time.monotonic() + REFRESH_AT * float(token.get("expires_in", 86_400))
 
 
-_client: AcledClient | None = None
+class SampleAcledClient:
+    """Fictional ACLED-shaped records placed around whatever area is searched.
+
+    For building and demonstrating the interface without API access. Every
+    record says it is a sample, the search is labelled acled_sample, and
+    evidence added from one is marked demo.
+    """
+
+    source = "acled_sample"
+
+    def read(self, params: dict[str, Any]) -> dict[str, Any]:
+        if int(params.get("page", 1)) > 1:
+            return {"status": 200, "data": []}
+        south, north = (float(v) for v in params["latitude"].split("|"))
+        west, east = (float(v) for v in params["longitude"].split("|"))
+        first, last = (date.fromisoformat(v) for v in params["event_date"].split("|"))
+        lat, lon = (south + north) / 2, (west + east) / 2
+        mid = first + (last - first) / 2
+        rows = [
+            (0.0, 0.0, mid, 1, 1, "Violence against civilians", "Attack", "Houses reported set on fire in a village"),
+            (0.02, 0.01, mid + timedelta(days=2), 2, 1, "Strategic developments", "Looting/property destruction", "Homes burned near the town"),
+            (-0.05, 0.04, mid - timedelta(days=5), 2, 2, "Battles", "Armed clash", "Clashes reported in the area during the week"),
+            (0.10, -0.12, first + timedelta(days=3), 3, 3, "Violence against civilians", "Attack", "Villages in the township reported burned during the month"),
+        ]
+        data = []
+        for i, (dlat, dlon, day, geo, time_, etype, sub, note) in enumerate(rows, start=1):
+            data.append(
+                {
+                    "event_id_cnty": f"SAMPLE{i}",
+                    "event_date": day.isoformat(),
+                    "time_precision": time_,
+                    "event_type": etype,
+                    "sub_event_type": sub,
+                    "location": f"Sample place {i}",
+                    "admin1": "Sample region",
+                    "country": "Sample",
+                    "latitude": lat + dlat,
+                    "longitude": lon + dlon,
+                    "geo_precision": geo,
+                    "source": "Sample source A; Sample source B",
+                    "notes": f"SAMPLE RECORD, not real ACLED data. {note}.",
+                    "fatalities": 0,
+                }
+            )
+        return {"status": 200, "data": data}
 
 
-def acled_client() -> AcledClient:
+_client: AcledClient | SampleAcledClient | None = None
+
+
+def acled_client() -> AcledClient | SampleAcledClient:
     global _client
     if _client is None:
-        _client = AcledClient(settings.acled_username, settings.acled_password.get_secret_value())
+        _client = (
+            SampleAcledClient()
+            if settings.acled_sample
+            else AcledClient(settings.acled_username, settings.acled_password.get_secret_value())
+        )
     return _client
 
 
@@ -154,7 +210,7 @@ def search_prior_reports(
     end_date: str | None = None,
     radius_km: float = DEFAULT_RADIUS_KM,
     searched_by: str = "investigator",
-    client: AcledClient | None = None,
+    client: AcledClient | SampleAcledClient | None = None,
 ) -> dict[str, Any]:
     """ACLED events within radius_km of a site (or area) and near its dates.
 
@@ -193,6 +249,7 @@ def search_prior_reports(
     }
 
     client = client or acled_client()
+    source = getattr(client, "source", "acled")
     rows: list[dict[str, Any]] = []
     truncated = False
     for page in range(1, MAX_PAGES + 1):
@@ -205,13 +262,13 @@ def search_prior_reports(
 
     reports = []
     for row in rows:
-        report = _normalise(row, geom, start, end)
+        report = _normalise(row, geom, start, end, source)
         if report and report["distance_km"] <= radius_km:
             reports.append(report)
     reports.sort(key=lambda r: (r["distance_km"], r["days_outside_window"]))
 
     searched = {
-        "source": "acled",
+        "source": source,
         "radius_km": radius_km,
         "dates": [start.isoformat(), end.isoformat()],
         "dates_searched": [query_start.isoformat(), query_end.isoformat()],
@@ -224,11 +281,12 @@ def search_prior_reports(
             """
             INSERT INTO prior_report_searches
                 (id, site_id, source, params_json, result_count, truncated, reports_json, searched_by, created_at)
-            VALUES (?, ?, 'acled', ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 search_id,
                 site_id,
+                source,
                 json.dumps(searched),
                 len(reports),
                 int(truncated),
@@ -271,7 +329,53 @@ def latest_search(site_id: str) -> dict[str, Any] | None:
     }
 
 
-def _normalise(row: dict[str, Any], geom, start: date, end: date) -> dict[str, Any] | None:
+def add_report_as_evidence(site_id: str, search_id: str, source_id: str, submitted_by: str) -> dict[str, Any]:
+    """Add one report from a saved search as evidence on the site.
+
+    The record comes from the saved search, never from the caller, so only
+    what ACLED actually returned can become evidence. It then needs checking
+    like any other item.
+    """
+    from core.evidence import EvidenceError, add_evidence
+
+    with session() as conn:
+        row = conn.execute(
+            "SELECT source, reports_json FROM prior_report_searches WHERE id = ? AND site_id = ?",
+            (search_id, site_id),
+        ).fetchone()
+        if not row:
+            raise EvidenceError("search not found for this site")
+        record = next((r for r in json.loads(row["reports_json"] or "[]") if r["source_id"] == source_id), None)
+        if not record:
+            raise EvidenceError("that report is not in this search")
+        for existing in conn.execute(
+            "SELECT record_json FROM evidence WHERE site_id = ? AND kind = 'prior_report'", (site_id,)
+        ):
+            if json.loads(existing["record_json"] or "{}").get("source_id") == source_id:
+                raise EvidenceError("this report is already evidence here")
+    return add_evidence(
+        site_id,
+        "prior_report",
+        submitted_by,
+        body=_evidence_text(record),
+        record=record,
+        is_demo=record["source"] == "acled_sample",
+    )
+
+
+def _evidence_text(r: dict[str, Any]) -> str:
+    place = ", ".join([p for p in [r.get("location"), *r.get("admin", [])] if p])
+    kind = " / ".join(p for p in (r.get("event_type"), r.get("sub_event_type")) if p)
+    lines = [
+        f"{'Sample' if r['source'] == 'acled_sample' else 'ACLED'} {r['source_id']}: {r['event_date']}, {place}"
+        + (f". {kind}" if kind else ""),
+        r.get("notes") or "",
+        f"Sources: {'; '.join(r['sources'])}" if r.get("sources") else "",
+    ]
+    return "\n".join(line for line in lines if line)
+
+
+def _normalise(row: dict[str, Any], geom, start: date, end: date, source: str = "acled") -> dict[str, Any] | None:
     try:
         lat, lon = float(row["latitude"]), float(row["longitude"])
         event_date = date.fromisoformat(row["event_date"])
@@ -281,7 +385,7 @@ def _normalise(row: dict[str, Any], geom, start: date, end: date) -> dict[str, A
     time_p = _int_or_none(row.get("time_precision"))
     days_outside = (start - event_date).days if event_date < start else (event_date - end).days if event_date > end else 0
     return {
-        "source": "acled",
+        "source": source,
         "source_id": row.get("event_id_cnty"),
         "event_date": event_date.isoformat(),
         "days_outside_window": days_outside,

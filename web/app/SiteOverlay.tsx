@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PriorReports from "./PriorReports";
 import { levelInfo, siteCentre, type Evidence, type EvidenceCheck, type Reviewer, type Site } from "@/lib/types";
 
 const LADDER = ["detected", "corroborated", "verified"] as const;
@@ -184,6 +185,20 @@ export default function SiteOverlay({
             <SiteImagery siteId={site.id} />
 
             {isInvestigation ? <HotspotList hotspots={hotspots} onOpen={onOpenSite} /> : null}
+
+            <PriorReports
+              siteId={site.id}
+              handle={handle}
+              addedIds={evidence.flatMap((e) => (e.record ? [e.record.source_id] : []))}
+              onAdd={(searchId, sourceId) =>
+                act(
+                  () => post(`/api/sites/${site.id}/prior-reports/evidence`, { search_id: searchId, source_id: sourceId, handle }),
+                  "Added as evidence. A colleague will check it.",
+                )
+              }
+              onSearched={() => setVersion((n) => n + 1)}
+              onMessage={setMsg}
+            />
 
             <section>
               <div className="mb-3 flex items-center justify-between">
@@ -662,7 +677,7 @@ function EvidenceItem({
   return (
     <li className="rounded-lg border border-[var(--line)] p-3">
       <div className="faint mb-1 text-[11px]">
-        {item.kind === "link" ? "Link" : "Testimony"}
+        {item.kind === "link" ? "Link" : item.kind === "prior_report" ? `Prior report · ${item.record?.source === "acled_sample" ? "sample" : "ACLED"}` : "Testimony"}
         {item.visibility === "reviewers" ? " · reviewers only" : ""}
         {item.is_demo ? " · demo" : ""}
       </div>

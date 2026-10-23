@@ -36,6 +36,9 @@ ADDED_COLUMNS = {
         ("question", "TEXT"),  # optional prompt that opens an investigation
         ("created_by", "TEXT"),
     ],
+    "evidence": [
+        ("record_json", "TEXT"),  # the source record a prior_report item was added from
+    ],
 }
 
 
@@ -85,6 +88,7 @@ def row_to_dict(row: sqlite3.Row | None) -> dict | None:
         "model_snapshot_json",
         "payload_json",
         "shares_source_with_json",
+        "record_json",
         "geometry_geojson",
     ):
         if key in data and isinstance(data[key], str) and data[key]:

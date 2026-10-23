@@ -52,8 +52,13 @@ def _summary(action: str, actor: str, payload: dict[str, Any]) -> str | None:
         return "Burn classifier run"
     if action == "check_seismic_confound":
         return f"Earthquake check: {FLAG_TEXT.get(payload.get('flag'), payload.get('flag'))}"
+    if action == "prior_reports_searched":
+        found = payload.get("found", 0)
+        sample = " (sample data)" if payload.get("source") == "acled_sample" else ""
+        return f"{actor} searched ACLED within {payload.get('radius_km'):g} km{sample}: {found} report{'s' if found != 1 else ''}"
     if action == "evidence_added":
-        return f"Evidence added ({payload.get('kind', 'item')})"
+        kind = {"prior_report": "prior report"}.get(payload.get("kind"), payload.get("kind", "item"))
+        return f"Evidence added ({kind})"
     if action == "evidence_checked":
         return f"{actor} checked evidence: located {payload.get('located')}, dated {payload.get('dated')}"
     if action == "verdict":

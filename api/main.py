@@ -32,7 +32,7 @@ from core.evidence import (
     list_evidence,
     verification,
 )
-from core.prior_reports import PriorReportsError, latest_search, search_prior_reports
+from core.prior_reports import PriorReportsError, add_report_as_evidence, latest_search, search_prior_reports
 from core.pwtt import screen_for_change
 from core.seed import seed_demo, seed_demo_evidence
 from core.seismic import check_seismic_confound
@@ -312,6 +312,20 @@ def post_prior_reports(site_id: str, body: PriorReportsIn) -> dict[str, Any]:
         raise HTTPException(status_code=status, detail=str(exc)) from exc
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"ACLED unreachable: {exc}") from exc
+
+
+class ReportEvidenceIn(BaseModel):
+    search_id: str
+    source_id: str
+    handle: str | None = None
+
+
+@app.post("/sites/{site_id}/prior-reports/evidence")
+def post_report_as_evidence(site_id: str, body: ReportEvidenceIn) -> dict[str, Any]:
+    try:
+        return add_report_as_evidence(site_id, body.search_id, body.source_id, body.handle or "")
+    except EvidenceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/sites/{site_id}/evidence")

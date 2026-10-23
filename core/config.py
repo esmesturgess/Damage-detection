@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     # myACLED login for prior-report search. SecretStr keeps it out of reprs and logs.
     acled_username: str = ""
     acled_password: SecretStr = SecretStr("")
+    # Fictional ACLED-shaped records instead of the API, for building without access.
+    acled_sample: bool = False
 
 
 settings = Settings()

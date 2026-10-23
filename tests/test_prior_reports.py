@@ -214,3 +214,60 @@ def test_credentials_never_reach_logs_or_the_database(caplog, tmp_path):
         assert secret not in dump
         assert secret not in json.dumps(result)
     assert PASSWORD not in repr(config.settings)
+
+
+def _investigation_with_search(rows):
+    inv = start_investigation(box_around(92.38, 20.82, 5), {"start": "2016-08-01", "end": "2017-07-31"}, EVENT, "Ka Nyin Tan")
+    result = search_prior_reports(inv["site_id"], client=_client(FakeAcled(pages=[rows])))
+    return inv["site_id"], result
+
+
+def test_report_becomes_evidence_from_the_saved_record_and_still_needs_checking():
+    from core.evidence import list_evidence, verification_for
+
+    site_id, result = _investigation_with_search([_event("MMR1", 92.38, 20.82)])
+    prior_reports.add_report_as_evidence(site_id, result["search_id"], "MMR1", "esme")
+
+    [item] = list_evidence(site_id)
+    assert item["kind"] == "prior_report"
+    assert item["record"]["source_id"] == "MMR1"
+    assert item["body"].startswith("ACLED MMR1: 2017-08-28, Maungdaw")
+    assert "Sources: Reuters; Radio Free Asia" in item["body"]
+    assert item["check"] is None
+    assert verification_for(site_id)["level"] == "detected"
+
+
+def test_only_records_from_the_search_can_be_added_and_only_once():
+    from core.evidence import EvidenceError, add_evidence
+
+    site_id, result = _investigation_with_search([_event("MMR1", 92.38, 20.82)])
+    with pytest.raises(EvidenceError):
+        prior_reports.add_report_as_evidence(site_id, result["search_id"], "MMR-INVENTED", "esme")
+    with pytest.raises(EvidenceError):
+        add_evidence(site_id, "prior_report", "esme", body="ACLED MMR9: made up")
+    prior_reports.add_report_as_evidence(site_id, result["search_id"], "MMR1", "esme")
+    with pytest.raises(EvidenceError, match="already"):
+        prior_reports.add_report_as_evidence(site_id, result["search_id"], "MMR1", "someone-else")
+
+
+def test_sample_records_are_labelled_everywhere():
+    from core.evidence import list_evidence
+
+    inv = start_investigation(box_around(92.38, 20.82, 5), {"start": "2016-08-01", "end": "2017-07-31"}, EVENT, "Ka Nyin Tan")
+    result = search_prior_reports(inv["site_id"], client=prior_reports.SampleAcledClient())
+
+    assert result["searched"]["source"] == "acled_sample"
+    assert result["reports"] and all(r["notes"].startswith("SAMPLE RECORD") for r in result["reports"])
+    prior_reports.add_report_as_evidence(inv["site_id"], result["search_id"], result["reports"][0]["source_id"], "esme")
+    assert list_evidence(inv["site_id"])[0]["is_demo"] is True
+
+
+def test_no_api_access_says_so():
+    def forbidden(request):
+        if request.url.path == "/oauth/token":
+            return httpx.Response(200, json={"access_token": "t", "refresh_token": "r", "expires_in": 86400})
+        return httpx.Response(403, json={"message": "Access denied"})
+
+    client = AcledClient("me@example.org", PASSWORD, transport=httpx.MockTransport(forbidden))
+    with pytest.raises(PriorReportsError, match="no API access"):
+        client.read({})
