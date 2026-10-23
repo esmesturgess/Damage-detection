@@ -35,12 +35,16 @@ export default function AreaLayers({
   opacity,
   onToggle,
   onOpacity,
+  tileTrouble,
+  onRetry,
 }: {
   analysis: Analysis;
   on: Record<AreaLayerId, boolean>;
   opacity: number;
   onToggle: (id: AreaLayerId, value: boolean) => void;
   onOpacity: (v: number) => void;
+  tileTrouble: boolean;
+  onRetry: () => void;
 }) {
   if (analysis.status === "idle" || analysis.status === "loading") {
     return (
@@ -126,6 +130,15 @@ export default function AreaLayers({
           onChange={(e) => onOpacity(Number(e.target.value))}
         />
       </label>
+
+      {tileTrouble ? (
+        <div className="flex items-center justify-between gap-2 rounded-lg bg-[#f5b34a]/10 px-3 py-2 text-[12px] text-[#f5b34a]">
+          <span>Earth Engine didn&apos;t render some tiles (busy or timed out).</span>
+          <button className="btn shrink-0 px-2.5 py-1 text-[12px]" onClick={onRetry}>
+            Retry
+          </button>
+        </div>
+      ) : null}
 
       {notes.map((n) => (
         <p key={n} className="text-[12px] text-[#f5b34a]">

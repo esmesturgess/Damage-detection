@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Map,
   GeoJSONSource,
+  RasterTileSource,
   setWorkerUrl,
   type MapLayerMouseEvent,
   type MapMouseEvent,
@@ -110,6 +111,7 @@ export default function MapApp() {
     change: true,
   });
   const [opacity, setOpacity] = useState(0.85);
+  const [tileTrouble, setTileTrouble] = useState(false);
   const shownLayers = useRef<Partial<Record<AreaLayerId, string>>>({});
 
   const selected = sites.find((s) => s.id === selectedId) ?? null;
@@ -209,6 +211,14 @@ export default function MapApp() {
           });
           map.on("mouseenter", "locations", () => (map.getCanvas().style.cursor = "pointer"));
           map.on("mouseleave", "locations", () => (map.getCanvas().style.cursor = ""));
+          // Earth Engine computes area tiles on demand and occasionally fails one
+          // (busy or timed out). Handling errors here keeps a single bad tile from
+          // surfacing as a page error; area failures get a retry in the Layers panel.
+          map.on("error", (e) => {
+            const sourceId = (e as { sourceId?: string }).sourceId;
+            if (sourceId?.startsWith("area-")) setTileTrouble(true);
+            else console.warn("Map error:", e.error?.message ?? e);
+          });
           // Sites usually arrive before the style finishes loading; effects below
           // wait on this so the data and handlers land on layers that exist.
           setMapReady(true);
@@ -284,7 +294,10 @@ export default function MapApp() {
         const data = await res.json();
         if (cancelled) return;
         if (!res.ok) setAnalysis({ status: "error", error: data.detail ?? "Couldn't load layers." });
-        else setAnalysis({ status: "ready", data });
+        else {
+          setTileTrouble(false);
+          setAnalysis({ status: "ready", data });
+        }
       } catch {
         if (!cancelled) setAnalysis({ status: "error", error: API_DOWN });
       }
@@ -482,6 +495,15 @@ export default function MapApp() {
                 opacity={opacity}
                 onToggle={(id, value) => setLayerOn((prev) => ({ ...prev, [id]: value }))}
                 onOpacity={setOpacity}
+                tileTrouble={tileTrouble}
+                onRetry={() => {
+                  setTileTrouble(false);
+                  for (const id of AREA_LAYERS) {
+                    const src = mapRef.current?.getSource(`area-${id}`) as RasterTileSource | undefined;
+                    const url = shownLayers.current[id];
+                    if (src && url) src.setTiles([url]); // re-requests the layer's tiles
+                  }
+                }}
               />
             </section>
           ) : null}
