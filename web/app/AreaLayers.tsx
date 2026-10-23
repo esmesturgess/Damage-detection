@@ -32,17 +32,13 @@ const BURN_RAMP = "linear-gradient(90deg, #fff7bc, #fec44f, #f03b20, #7f0000)";
 export default function AreaLayers({
   analysis,
   on,
-  opacity,
   onToggle,
-  onOpacity,
   tileTrouble,
   onRetry,
 }: {
   analysis: Analysis;
   on: Record<AreaLayerId, boolean>;
-  opacity: number;
   onToggle: (id: AreaLayerId, value: boolean) => void;
-  onOpacity: (v: number) => void;
   tileTrouble: boolean;
   onRetry: () => void;
 }) {
@@ -114,22 +110,6 @@ export default function AreaLayers({
           </p>
         ) : null}
       </div>
-
-      <label className="block">
-        <div className="mb-1 flex justify-between">
-          <span>Opacity</span>
-          <span className="num muted">{Math.round(opacity * 100)}%</span>
-        </div>
-        <input
-          className="w-full accent-[var(--accent)]"
-          type="range"
-          min={0.2}
-          max={1}
-          step={0.05}
-          value={opacity}
-          onChange={(e) => onOpacity(Number(e.target.value))}
-        />
-      </label>
 
       {tileTrouble ? (
         <div className="flex items-center justify-between gap-2 rounded-lg bg-[#f5b34a]/10 px-3 py-2 text-[12px] text-[#f5b34a]">

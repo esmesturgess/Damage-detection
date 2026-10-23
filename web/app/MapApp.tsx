@@ -12,6 +12,7 @@ import {
 } from "maplibre-gl";
 import { LEVELS, type Level, type Reviewer, type Site } from "@/lib/types";
 import AreaLayers, { AREA_LAYERS, type AreaLayerId, type Analysis } from "./AreaLayers";
+import Intro from "./Intro";
 import LocationPanel from "./LocationPanel";
 import TimeBar, { label, monthIndex, windows } from "./TimeBar";
 
@@ -22,6 +23,10 @@ setWorkerUrl("/maplibre-gl-worker.mjs");
 const RAKHINE: [number, number] = [93.8, 20.8];
 const API_DOWN = "API unreachable. Start uvicorn on :8000.";
 const LEVEL_COLOR = Object.fromEntries(LEVELS.map((l) => [l.id, l.color])) as Record<Level, string>;
+const BRICK = "#a8442f";
+const AREA_OPACITY = 0.85;
+const INTRO_SEEN = "burn-evidence:intro-seen";
+const EXAMPLE = { lat: 20.82, lon: 92.38, range: [monthIndex(2017, 7), monthIndex(2017, 8)] as [number, number] };
 const SITE_BOX_KM = 3;
 const COORD_BOX_KM = 5;
 
@@ -93,7 +98,8 @@ export default function MapApp() {
   const [sites, setSites] = useState<Site[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showDetected, setShowDetected] = useState(false);
+  const [showDetected, setShowDetected] = useState(true);
+  const [introOpen, setIntroOpen] = useState(false);
   const [range, setRange] = useState<[number, number]>([monthIndex(2017, 7), monthIndex(2017, 8)]);
   const [coordText, setCoordText] = useState("");
   const [reviewerOpen, setReviewerOpen] = useState(false);
@@ -110,7 +116,6 @@ export default function MapApp() {
     burn: false,
     change: true,
   });
-  const [opacity, setOpacity] = useState(0.85);
   const [tileTrouble, setTileTrouble] = useState(false);
   const shownLayers = useRef<Partial<Record<AreaLayerId, string>>>({});
 
@@ -125,6 +130,16 @@ export default function MapApp() {
     } catch {
       setError(API_DOWN);
     }
+  }, []);
+
+  useEffect(() => {
+    let seen = true;
+    try {
+      seen = localStorage.getItem(INTRO_SEEN) === "1";
+    } catch {
+      /* storage unavailable: don't nag */
+    }
+    if (!seen) queueMicrotask(() => setIntroOpen(true));
   }, []);
 
   useEffect(() => {
@@ -174,13 +189,13 @@ export default function MapApp() {
             id: "aoi-fill",
             type: "fill",
             source: "aoi",
-            paint: { "fill-color": "#d4ff4a", "fill-opacity": 0.08 },
+            paint: { "fill-color": "#ffffff", "fill-opacity": 0.06 },
           });
           map.addLayer({
             id: "aoi-line",
             type: "line",
             source: "aoi",
-            paint: { "line-color": "#d4ff4a", "line-width": 1.2, "line-dasharray": [2, 1] },
+            paint: { "line-color": "#ffffff", "line-width": 1.5, "line-dasharray": [2, 1] },
           });
           // One circle per location, coloured by verification level. Detected is
           // an outline only: a machine signal, not a claim.
@@ -197,7 +212,7 @@ export default function MapApp() {
                 "rgba(0,0,0,0)",
                 ["get", "color"],
               ],
-              "circle-stroke-width": ["match", ["get", "level"], "detected", 1.5, "disputed", 2.5, 1],
+              "circle-stroke-width": ["match", ["get", "level"], "detected", 1.5, "disputed", 2.5, "verified", 3, 1],
               "circle-stroke-color": [
                 "match",
                 ["get", "level"],
@@ -205,6 +220,8 @@ export default function MapApp() {
                 LEVEL_COLOR.detected,
                 "disputed",
                 LEVEL_COLOR.explained,
+                "verified",
+                BRICK,
                 "#050506",
               ],
             },
@@ -327,10 +344,10 @@ export default function MapApp() {
       }
       if (map.getLayer(layerId)) {
         map.setLayoutProperty(layerId, "visibility", layerOn[id] ? "visible" : "none");
-        map.setPaintProperty(layerId, "raster-opacity", opacity);
+        map.setPaintProperty(layerId, "raster-opacity", AREA_OPACITY);
       }
     }
-  }, [analysis, aoi, layerOn, opacity, mapReady]);
+  }, [analysis, aoi, layerOn, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -371,12 +388,32 @@ export default function MapApp() {
     };
   }, [drawing]);
 
+  function closeIntro() {
+    setIntroOpen(false);
+    try {
+      localStorage.setItem(INTRO_SEEN, "1");
+    } catch {
+      /* storage unavailable */
+    }
+  }
+
+  function showExample() {
+    closeIntro();
+    setRange(EXAMPLE.range);
+    setCoordText(`${EXAMPLE.lat}, ${EXAMPLE.lon}`);
+    goTo(EXAMPLE.lat, EXAMPLE.lon);
+  }
+
   function applyCoordinates() {
     const [la, lo] = coordText.split(/[\s,]+/).filter(Boolean).map(Number);
     if (!(Math.abs(la) <= 90 && Math.abs(lo) <= 180)) {
       setProbeMsg("Type latitude, longitude, e.g. 20.82, 92.38");
       return;
     }
+    goTo(la, lo);
+  }
+
+  function goTo(la: number, lo: number) {
     const box = boxAround(la, lo, COORD_BOX_KM);
     setAoi(box);
     setProbeMsg("");
@@ -432,17 +469,23 @@ export default function MapApp() {
     <div className="relative h-full w-full">
       <div ref={container} className="h-full w-full" />
 
-      <div className="pointer-events-none absolute left-4 right-4 top-4 flex items-stretch gap-3">
-        <div className="panel flex w-72 shrink-0 items-center gap-2.5 px-4">
-          <span className="h-2.5 w-2.5 rounded-full bg-[var(--accent)] shadow-[0_0_10px_var(--accent)]" />
-          <span className="text-[15px] font-semibold tracking-tight">Burn Evidence</span>
-        </div>
-        <div className="min-w-0 flex-1">
-          <TimeBar start={range[0]} end={range[1]} onChange={(s, e) => setRange([s, e])} />
-        </div>
+      <div className="pointer-events-none absolute left-[calc(18rem+16px)] right-4 top-4">
+        <TimeBar start={range[0]} end={range[1]} onChange={(s, e) => setRange([s, e])} />
       </div>
 
-      <aside className="panel absolute bottom-4 left-4 top-[104px] flex w-72 flex-col overflow-hidden">
+      <aside className="absolute bottom-0 left-0 top-0 flex w-72 flex-col border-r border-[var(--line)] bg-[var(--panel)]">
+        <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-4 py-4">
+          <span className="h-3 w-3 rounded-sm bg-[var(--accent)]" />
+          <span className="flex-1 text-[15px] font-semibold tracking-tight">Burn Evidence</span>
+          <button
+            className="btn h-7 w-7 rounded-full p-0 text-[13px]"
+            onClick={() => setIntroOpen(true)}
+            aria-label="How to use"
+            title="How to use"
+          >
+            ?
+          </button>
+        </div>
         <div className="flex-1 space-y-5 overflow-auto p-4">
           <section>
             <div className="eyebrow mb-2">Area</div>
@@ -492,9 +535,7 @@ export default function MapApp() {
               <AreaLayers
                 analysis={analysis}
                 on={layerOn}
-                opacity={opacity}
                 onToggle={(id, value) => setLayerOn((prev) => ({ ...prev, [id]: value }))}
-                onOpacity={setOpacity}
                 tileTrouble={tileTrouble}
                 onRetry={() => {
                   setTileTrouble(false);
@@ -524,7 +565,9 @@ export default function MapApp() {
                         ? { border: `1.5px solid ${l.color}` }
                         : l.id === "disputed"
                           ? { background: l.color, border: `2px solid ${LEVEL_COLOR.explained}` }
-                          : { background: l.color }
+                          : l.id === "verified"
+                            ? { background: l.color, border: `2.5px solid ${BRICK}` }
+                            : { background: l.color }
                     }
                   />
                   <span className="flex-1">{l.label}</span>
@@ -606,6 +649,8 @@ export default function MapApp() {
           onChanged={loadSites}
         />
       ) : null}
+
+      {introOpen ? <Intro onClose={closeIntro} onExample={showExample} /> : null}
     </div>
   );
 }

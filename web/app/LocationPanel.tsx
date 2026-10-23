@@ -212,7 +212,7 @@ export default function LocationPanel({
         </section>
       ) : null}
 
-      {msg ? <p className="rounded-lg bg-[var(--accent)]/10 px-3 py-2 text-[var(--accent)]">{msg}</p> : null}
+      {msg ? <p className="rounded-lg bg-[var(--accent-soft)] px-3 py-2 text-[var(--accent-text)]">{msg}</p> : null}
       {site.is_demo ? <p className="faint mt-3 text-[12px]">Demo location: synthetic data, not a finding.</p> : null}
     </aside>
   );
@@ -325,7 +325,7 @@ function EvidenceItem({
         {item.is_demo ? " · demo" : ""}
       </div>
       {item.url ? (
-        <a className="break-all text-[#7cc8ff] hover:underline" href={item.url} target="_blank" rel="noopener noreferrer nofollow">
+        <a className="link break-all" href={item.url} target="_blank" rel="noopener noreferrer nofollow">
           {item.url}
         </a>
       ) : null}
@@ -343,7 +343,7 @@ function EvidenceItem({
         )}
       </div>
       {reviewer.enabled ? (
-        <button className="mt-1.5 text-[12px] text-[var(--accent)] hover:underline" onClick={() => setOpen(!open)}>
+        <button className="link mt-1.5 text-[12px]" onClick={() => setOpen(!open)}>
           {open ? "Cancel" : c ? "Re-check" : "Check this item"}
         </button>
       ) : null}

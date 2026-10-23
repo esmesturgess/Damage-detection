@@ -61,8 +61,9 @@ export type Job = {
 export type Reviewer = { name: string; token: string; enabled: boolean };
 
 export const LEVELS: { id: Level; label: string; color: string; note: string }[] = [
-  { id: "verified", label: "Verified", color: "#ff4d2e", note: "2+ independent sources, second-reviewer sign-off" },
-  { id: "corroborated", label: "Corroborated", color: "#f5a623", note: "evidence located and dated by a reviewer" },
+  // Cream with a brick ring on the map: reads as "confirmed", not as burn red.
+  { id: "verified", label: "Verified", color: "#f4efe6", note: "2+ independent sources, signed off by a second investigator" },
+  { id: "corroborated", label: "Corroborated", color: "#f5a623", note: "evidence located and dated by an investigator" },
   { id: "disputed", label: "Disputed", color: "#f5a623", note: "credible evidence on both sides" },
   { id: "explained", label: "Explained", color: "#6ec8ff", note: "non-hostile cause: crops, earthquake…" },
   { id: "detected", label: "Detected", color: "#8a8d84", note: "satellite signal only, unreviewed" },
