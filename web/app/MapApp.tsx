@@ -116,6 +116,8 @@ export default function MapApp() {
   const drawStart = useRef<[number, number] | null>(null);
   const [aoi, setAoi] = useState<GeoJSON.Polygon | null>(null);
   const [probeMsg, setProbeMsg] = useState("");
+  // Which box + dates have been scanned. Starting an investigation comes after a scan.
+  const [scan, setScan] = useState<{ key: string; status: "scanning" | "done" } | null>(null);
   const [handle, setHandle] = useState("");
   const [analysis, setAnalysis] = useState<Analysis>({ status: "idle" });
   const [layerOn, setLayerOn] = useState<Record<AreaLayerId, boolean>>({
@@ -363,7 +365,10 @@ export default function MapApp() {
       sites.some((s) => s.kind === "investigation" && JSON.stringify(s.geometry.coordinates) === JSON.stringify(aoi.coordinates)),
     [aoi, sites],
   );
+  const scanKey = JSON.stringify([aoi?.coordinates, win]);
+  const scanStatus = scan?.key === scanKey ? scan.status : "none";
   const startMarker = useRef<Marker | null>(null);
+  const markerAction = useRef<() => void>(() => {});
 
   useEffect(() => {
     const map = mapRef.current;
@@ -374,8 +379,7 @@ export default function MapApp() {
     if (!startMarker.current) {
       const button = document.createElement("button");
       button.className = "btn btn-primary shadow-lg";
-      button.textContent = "Start investigation";
-      button.addEventListener("click", () => setStartOpen(true));
+      button.addEventListener("click", () => markerAction.current());
       startMarker.current = new Marker({ element: button, anchor: "top", offset: [0, 10] });
     }
     const marker = startMarker.current;
@@ -528,6 +532,16 @@ export default function MapApp() {
     mapRef.current?.fitBounds([sw as [number, number], ne as [number, number]], { padding: 160, maxZoom: 12 });
   }
 
+  // The button under the box: scan first, then start an investigation.
+  useEffect(() => {
+    const button = startMarker.current?.getElement() as HTMLButtonElement | undefined;
+    markerAction.current = scanStatus === "done" ? () => setStartOpen(true) : () => void runScan();
+    if (!button) return;
+    button.textContent =
+      scanStatus === "done" ? "Start an investigation" : scanStatus === "scanning" ? "Scanning…" : "Scan for change";
+    button.disabled = scanStatus === "scanning";
+  });
+
   function clearArea() {
     setAoi(null);
     setAnalysis({ status: "idle" });
@@ -535,14 +549,28 @@ export default function MapApp() {
   }
 
   async function runScan() {
+    try {
+      await scanArea();
+    } catch {
+      setScan(null);
+      setProbeMsg(API_DOWN);
+    }
+  }
+
+  async function scanArea() {
     if (!aoi) return setProbeMsg("Draw a box or enter coordinates first.");
+    const key = scanKey;
+    setScan({ key, status: "scanning" });
     const res = await fetch("/api/jobs", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ aoi_geojson: aoi, baseline_window: win.baseline, event_window: win.event, z_threshold: 3.0 }),
     });
     const data = await res.json();
-    if (!data.job_id) return setProbeMsg(data.detail ?? "Scan failed.");
+    if (!data.job_id) {
+      setScan(null);
+      return setProbeMsg(data.detail ?? "Scan failed.");
+    }
     const period = `${label(range[0])} → ${label(range[1])}`;
     setProbeMsg(`Scanning ${period} in Earth Engine… usually under a minute.`);
 
@@ -557,12 +585,17 @@ export default function MapApp() {
             (r.notes?.length ? " " + r.notes.join(" ") : ""),
         );
         setShowDetected(true);
+        setScan({ key, status: "done" });
         return loadSites();
       }
-      if (job.status === "failed") return setProbeMsg(`Scan failed: ${job.error}`);
+      if (job.status === "failed") {
+        setScan(null);
+        return setProbeMsg(`Scan failed: ${job.error}`);
+      }
       if (i === 2 && job.status === "queued") setProbeMsg(`Waiting for the worker… is \`python -m api.worker\` running?`);
       await new Promise((r) => setTimeout(r, 3000));
     }
+    setScan(null);
     setProbeMsg("The scan is taking a long time. It keeps running; check back shortly.");
   }
 
@@ -623,8 +656,8 @@ export default function MapApp() {
             </form>
             {aoi ? (
               <div className="mt-3 flex gap-2">
-                <button className="btn btn-primary flex-1" onClick={runScan}>
-                  Scan for change
+                <button className="btn btn-primary flex-1" onClick={runScan} disabled={scanStatus === "scanning"}>
+                  {scanStatus === "scanning" ? "Scanning…" : scanStatus === "done" ? "Scan again" : "Scan for change"}
                 </button>
                 <button className="btn" onClick={clearArea}>
                   Clear
