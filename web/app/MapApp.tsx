@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Map,
   GeoJSONSource,
+  Marker,
   RasterTileSource,
   setWorkerUrl,
   type MapLayerMouseEvent,
@@ -355,6 +356,50 @@ export default function MapApp() {
     );
   }, [aoi, mapReady]);
 
+  const aoiIsInvestigation = useMemo(
+    () =>
+      !!aoi &&
+      sites.some((s) => s.kind === "investigation" && JSON.stringify(s.geometry.coordinates) === JSON.stringify(aoi.coordinates)),
+    [aoi, sites],
+  );
+  const startMarker = useRef<Marker | null>(null);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || !aoi || aoiIsInvestigation || drawing) {
+      startMarker.current?.remove();
+      return;
+    }
+    if (!startMarker.current) {
+      const button = document.createElement("button");
+      button.className = "btn btn-primary shadow-lg";
+      button.textContent = "Start investigation";
+      button.addEventListener("click", () => setStartOpen(true));
+      startMarker.current = new Marker({ element: button, anchor: "top", offset: [0, 10] });
+    }
+    const marker = startMarker.current;
+    const ring = aoi.coordinates[0];
+    const xs = ring.map((c) => c[0]);
+    const ys = ring.map((c) => c[1]);
+    const centreLon = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const south = Math.min(...ys);
+    const north = Math.max(...ys);
+    const GAP = 10;
+    // Below the box when there's room on screen, otherwise above it.
+    const place = () => {
+      const roomBelow = map.getContainer().clientHeight - map.project([centreLon, south]).y;
+      const height = marker.getElement().offsetHeight || 36;
+      if (roomBelow > GAP + height + 28) marker.setLngLat([centreLon, south]).setOffset([0, GAP]);
+      else marker.setLngLat([centreLon, north]).setOffset([0, -(GAP + height)]);
+    };
+    marker.setLngLat([centreLon, south]).addTo(map);
+    place();
+    map.on("move", place);
+    return () => {
+      map.off("move", place);
+    };
+  }, [aoi, aoiIsInvestigation, drawing, mapReady]);
+
   // Earth Engine layers for the analysed area, refetched when the area or
   // the time window changes (debounced so dragging the time bar is cheap).
   useEffect(() => {
@@ -585,11 +630,6 @@ export default function MapApp() {
                   Clear
                 </button>
               </div>
-            ) : null}
-            {aoi ? (
-              <button className="btn mt-2 w-full" onClick={() => setStartOpen(true)}>
-                Start investigation
-              </button>
             ) : null}
             {probeMsg ? <p className="muted mt-2">{probeMsg}</p> : null}
             {error ? <p className="mt-2 text-[#ff6b4a]">{error}</p> : null}
