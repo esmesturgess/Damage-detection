@@ -23,11 +23,10 @@ MAX_PIXEL_CLOUD = 40  # s2cloudless probability above which a pixel is dropped
 POST_EXTENSION_DAYS = 90  # widen the after-window when it has no clear scene
 
 TRUE_COLOUR = {"bands": ["B4", "B3", "B2"], "min": 0, "max": 2500, "gamma": 1.2}
-# Palettes match the keys in web/app/AreaLayers.tsx. Radar change runs oxblood
-# to pale yellow so the strongest change is brightest on dark imagery.
-CHANGE_VIS = {"min": 3, "max": 5, "palette": ["6b261b", "9a4a35", "c98a62", "e6c493", "f6ecc8"]}
-# USGS dNBR severity classes, shown from "low" upwards, as soot greys.
-BURN_VIS = {"min": 0.1, "max": 0.66, "palette": ["cfc8bb", "9a938a", "6b655d", "3f3a35", "1d1a17"]}
+# Palettes match the keys in web/app/AreaLayers.tsx.
+CHANGE_VIS = {"min": 3, "max": 5, "palette": ["ffff00", "ff0000", "800080"]}
+# USGS dNBR severity classes, shown from "low" upwards.
+BURN_VIS = {"min": 0.1, "max": 0.66, "palette": ["fff7bc", "fec44f", "f03b20", "7f0000"]}
 
 _TTL_S = 3600
 _cache: dict[str, tuple[float, dict[str, Any]]] = {}

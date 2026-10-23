@@ -27,8 +27,8 @@ export type Analysis =
   | { status: "ready"; data: AnalysisData };
 
 // Same palettes as CHANGE_VIS and BURN_VIS in core/imagery.py, weak to strong.
-const CHANGE_STEPS = ["#6b261b", "#9a4a35", "#c98a62", "#e6c493", "#f6ecc8"];
-const BURN_STEPS = ["#cfc8bb", "#9a938a", "#6b655d", "#3f3a35", "#1d1a17"];
+const CHANGE_STEPS = ["#ffff00", "#ff8000", "#ff0000", "#c00040", "#800080"];
+const BURN_STEPS = ["#fff7bc", "#fec44f", "#f03b20", "#7f0000"];
 
 export default function AreaLayers({
   analysis,
