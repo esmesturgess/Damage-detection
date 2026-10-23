@@ -95,3 +95,19 @@ CREATE TABLE IF NOT EXISTS assessments (
 
 CREATE INDEX IF NOT EXISTS idx_evidence_site ON evidence(site_id);
 CREATE INDEX IF NOT EXISTS idx_checks_evidence ON evidence_checks(evidence_id);
+
+-- Every prior-report search, kept as a record of what was looked for and
+-- found (including nothing). reports_json is ACLED's data as returned.
+CREATE TABLE IF NOT EXISTS prior_report_searches (
+    id TEXT PRIMARY KEY,
+    site_id TEXT,                             -- null for a search by area only
+    source TEXT NOT NULL,                     -- acled
+    params_json TEXT NOT NULL,
+    result_count INTEGER NOT NULL,
+    truncated INTEGER NOT NULL DEFAULT 0,
+    reports_json TEXT,
+    searched_by TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_prior_searches_site ON prior_report_searches(site_id, created_at);

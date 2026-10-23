@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import httpx
+
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -30,6 +32,7 @@ from core.evidence import (
     list_evidence,
     verification,
 )
+from core.prior_reports import PriorReportsError, latest_search, search_prior_reports
 from core.pwtt import screen_for_change
 from core.seed import seed_demo, seed_demo_evidence
 from core.seismic import check_seismic_confound
@@ -284,6 +287,31 @@ def post_investigation(body: InvestigationIn) -> dict[str, Any]:
 def get_history(site_id: str) -> list[dict[str, Any]]:
     get_site(site_id)  # 404 if missing
     return site_history(site_id)
+
+
+class PriorReportsIn(BaseModel):
+    radius_km: float = Field(default=10.0, gt=0, le=100)
+    handle: str | None = None
+
+
+@app.get("/sites/{site_id}/prior-reports")
+def get_prior_reports(site_id: str) -> dict[str, Any] | None:
+    """The last saved search for this site, or null if nobody has searched yet."""
+    get_site(site_id)
+    return latest_search(site_id)
+
+
+@app.post("/sites/{site_id}/prior-reports")
+def post_prior_reports(site_id: str, body: PriorReportsIn) -> dict[str, Any]:
+    """Search ACLED near this site and its dates. Data only; nothing is judged."""
+    get_site(site_id)
+    try:
+        return search_prior_reports(site_id, radius_km=body.radius_km, searched_by=(body.handle or "").strip() or "investigator")
+    except PriorReportsError as exc:
+        status = 503 if "not configured" in str(exc) else 502
+        raise HTTPException(status_code=status, detail=str(exc)) from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"ACLED unreachable: {exc}") from exc
 
 
 @app.get("/sites/{site_id}/evidence")

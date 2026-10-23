@@ -15,6 +15,7 @@ from core.bundle import get_evidence_bundle as core_bundle
 from core.burn import classify_burn as core_classify
 from core.coverage import check_coverage as core_coverage
 from core.db import init_db
+from core.prior_reports import search_prior_reports as core_prior_reports
 from core.pwtt import screen_for_change as core_screen
 from core.seismic import check_seismic_confound as core_seismic
 
@@ -64,6 +65,41 @@ def check_seismic_confound(site_ids: list[str], window_days: int = 30) -> list[d
 def get_evidence_bundle(site_id: str) -> dict[str, Any]:
     """Before/after chips, dNBR, burn mask, features, PWTT z, scene IDs, provenance. Not a finding."""
     return core_bundle(site_id)
+
+
+
+@mcp.tool()
+def search_prior_reports(
+    site_id: str | None = None,
+    aoi_geojson: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    radius_km: float = 10.0,
+) -> dict[str, Any]:
+    """Documented incidents (ACLED) near a site or area and its dates. Raw records, nearest first.
+
+    Give a site_id to use that site's area and event window, or aoi_geojson
+    (a GeoJSON Point or Polygon) with start_date and end_date (YYYY-MM-DD).
+    The search reaches 31 days either side of the dates, because ACLED dates
+    events known only to a week or month to a single day; days_outside_window
+    says how far each report falls outside the requested dates.
+
+    Each report's distance_km is from the site (0 = inside the area). Read it
+    against geo_precision, ACLED's own code for how exact the location is:
+      1 = the town named in reporting; coordinates are that town
+      2 = near a town or a small part of a region; coded to a nearby town
+      3 = only a larger region named; coded to a representative location
+    and the date against time_precision:
+      1 = exact date, 2 = sometime that week, 3 = sometime that month
+
+    An empty list is a real answer: nothing documented in ACLED near this
+    place and time. It is not evidence the event did not happen. If
+    truncated is true, results were cut off; narrow the dates or radius.
+
+    Every search is recorded against the site. The query is sent to ACLED.
+    """
+    aoi = json.loads(aoi_geojson) if aoi_geojson else None
+    return core_prior_reports(site_id, aoi, start_date, end_date, radius_km, searched_by="agent")
 
 
 def main() -> None:

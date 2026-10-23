@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,6 +23,9 @@ class Settings(BaseSettings):
     default_z_threshold: float = 3.0
     default_baseline_months: int = 12
     max_aoi_km2: float = 2_500.0
+    # myACLED login for prior-report search. SecretStr keeps it out of reprs and logs.
+    acled_username: str = ""
+    acled_password: SecretStr = SecretStr("")
 
 
 settings = Settings()
