@@ -8,6 +8,7 @@ from typing import Any
 
 from core.config import settings
 from core.db import row_to_dict, session
+from core.evidence import verification
 
 
 def get_evidence_bundle(site_id: str) -> dict[str, Any]:
@@ -21,7 +22,8 @@ def get_evidence_bundle(site_id: str) -> dict[str, Any]:
         files = _list_existing(raster_dir)
         return {
             "site_id": site_id,
-            "status": site["status"],
+            # The verification ladder, computed from evidence checks and verdicts. Only people move it.
+            "verification": {k: v for k, v in verification(conn, site_id).items() if k != "agreement"},
             "calibration_status": site.get("calibration_status"),
             "optical_read": site.get("optical_read"),
             "geometry": site.get("geometry"),
@@ -32,7 +34,6 @@ def get_evidence_bundle(site_id: str) -> dict[str, Any]:
             "seismic": site.get("seismic"),
             "scene_ids": site.get("scene_ids"),
             "acquisition_timestamps": site.get("timestamps"),
-            "human_verdict_required": site["status"] == "pending_review",
             "artifacts": {
                 "before_png": files.get("before.png"),
                 "after_png": files.get("after.png"),

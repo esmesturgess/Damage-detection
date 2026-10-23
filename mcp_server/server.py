@@ -16,22 +16,44 @@ from core.burn import classify_burn as core_classify
 from core.coverage import check_coverage as core_coverage
 from core.db import init_db
 from core.prior_reports import search_prior_reports as core_prior_reports
+from core.pwtt import scan_result as core_scan_result
 from core.pwtt import screen_for_change as core_screen
 from core.seismic import check_seismic_confound as core_seismic
 
-mcp = FastMCP("burn-evidence-screening")
+INSTRUCTIONS = """Tools for gathering evidence about possible burning and destruction of settlements.
+
+You gather data for human investigators; you do not decide what happened.
+Report what each tool returned, with its caveats (calibration_status,
+precision codes, sample or provisional data), and leave conclusions to the
+investigators. No tool here can publish, verify or change a site's level.
+
+Usual order for an area and dates: check_coverage, then screen_for_change,
+then get_scan_result (scans take minutes), then classify_burn on the site
+ids it returns. check_seismic_confound belongs only to sites that changed
+on radar but are not burn-positive. search_prior_reports finds documented
+incidents (ACLED) near a site or area; get_evidence_bundle gives one site's
+full satellite record."""
+
+mcp = FastMCP("burn-evidence-screening", instructions=INSTRUCTIONS)
+
+
+# Areas arrive as GeoJSON text or, once the MCP layer has parsed that text, as an object.
+Area = str | dict[str, Any]
+
+
+def _area(aoi_geojson: Area | None) -> dict[str, Any] | None:
+    return json.loads(aoi_geojson) if isinstance(aoi_geojson, str) else aoi_geojson
 
 
 @mcp.tool()
-def check_coverage(aoi_geojson: str, start_date: str, end_date: str) -> dict[str, Any]:
+def check_coverage(aoi_geojson: Area, start_date: str, end_date: str) -> dict[str, Any]:
     """Sentinel-1/2 scene counts and cloud fraction for an AOI. Call before screen_for_change."""
-    aoi = json.loads(aoi_geojson) if isinstance(aoi_geojson, str) else aoi_geojson
-    return core_coverage(aoi, start_date, end_date)
+    return core_coverage(_area(aoi_geojson), start_date, end_date)
 
 
 @mcp.tool()
 def screen_for_change(
-    aoi_geojson: str,
+    aoi_geojson: Area,
     baseline_start: str,
     baseline_end: str,
     event_start: str,
@@ -39,14 +61,23 @@ def screen_for_change(
     z_threshold: float = 3.0,
 ) -> dict[str, str]:
     """PWTT over the AOI. Returns a job id; this takes minutes. Runs anywhere Sentinel-1 reaches."""
-    aoi = json.loads(aoi_geojson) if isinstance(aoi_geojson, str) else aoi_geojson
     job_id = core_screen(
-        aoi,
+        _area(aoi_geojson),
         {"start": baseline_start, "end": baseline_end},
         {"start": event_start, "end": event_end},
         z_threshold,
     )
     return {"job_id": job_id}
+
+
+@mcp.tool()
+def get_scan_result(job_id: str, wait_seconds: float = 60) -> dict[str, Any]:
+    """Status of a screen_for_change job; when it has succeeded, the hot-spot site ids it created.
+
+    Waits up to wait_seconds (at most 120) for the scan to finish. If status is still
+    queued or running, call again. Pass result.site_ids to classify_burn.
+    """
+    return core_scan_result(job_id, min(max(wait_seconds, 0), 120))
 
 
 @mcp.tool()
@@ -71,7 +102,7 @@ def get_evidence_bundle(site_id: str) -> dict[str, Any]:
 @mcp.tool()
 def search_prior_reports(
     site_id: str | None = None,
-    aoi_geojson: str | None = None,
+    aoi_geojson: Area | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
     radius_km: float = 10.0,
@@ -98,8 +129,7 @@ def search_prior_reports(
 
     Every search is recorded against the site. The query is sent to ACLED.
     """
-    aoi = json.loads(aoi_geojson) if aoi_geojson else None
-    return core_prior_reports(site_id, aoi, start_date, end_date, radius_km, searched_by="agent")
+    return core_prior_reports(site_id, _area(aoi_geojson), start_date, end_date, radius_km, searched_by="agent")
 
 
 def main() -> None:

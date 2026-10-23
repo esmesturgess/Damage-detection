@@ -625,10 +625,10 @@ export default function MapApp() {
     <div className="relative h-full w-full">
       <div ref={container} className="h-full w-full" />
 
-      {/* Name block, top left. Room for a logo. */}
-      <div className={`${CHROME} on-paper absolute left-4 top-4 flex h-[86px] w-[248px] items-center gap-3 border border-[var(--rule)] px-4`}>
-        <h1 className="display flex-1 text-[22px] font-semibold leading-[1.05]">Corroborator</h1>
-        <button className="link self-start pt-3 text-[12px]" onClick={() => setIntroOpen(true)}>
+      {/* Name block, top left. 36px fills the 214px inside the padding (Newsreader 600). */}
+      <div className={`${CHROME} on-paper absolute left-4 top-4 flex h-[86px] w-[248px] items-center border border-[var(--rule)] px-4`}>
+        <h1 className="display whitespace-nowrap text-[36px] font-semibold leading-none">Corroborator</h1>
+        <button className="link absolute right-2 top-1.5 text-[11px]" onClick={() => setIntroOpen(true)}>
           Help
         </button>
       </div>

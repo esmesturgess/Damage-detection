@@ -74,11 +74,11 @@ The project must be registered for Earth Engine. The Community tier allows 150 E
 
 ### MCP server
 
-```bash
-python -m mcp_server.server
-```
+Seven read-only tools over the same core as the API: `check_coverage`, `screen_for_change`, `get_scan_result`, `classify_burn`, `check_seismic_confound`, `get_evidence_bundle`, `search_prior_reports`. None can submit evidence, give a verdict or change a level. The server tells connecting agents to gather and report, not to judge.
 
-Five tools over the same core as the API: `check_coverage`, `screen_for_change`, `classify_burn`, `check_seismic_confound`, `get_evidence_bundle`.
+`.mcp.json` registers it for Claude Code and Claude Desktop: open Claude Code in this folder, approve the `burn-evidence` server, and ask, for example, "Was there burning near Maungdaw in September 2017?". To run it by hand: `python -m mcp_server.server`.
+
+Prior reports come from ACLED, which needs a licensed account with API access. Until then, `ACLED_SAMPLE=true` returns fictional records labelled as samples.
 
 ## Architecture
 

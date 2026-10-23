@@ -9,6 +9,7 @@ hot-spot locations, and computes the burn features around each one.
 from __future__ import annotations
 
 import json
+import time
 from datetime import date, timedelta
 from typing import Any
 
@@ -69,6 +70,25 @@ def screen_for_change(
         )
         audit(conn, "system", "job_queued", "job", job_id, {"kind": "screen_for_change"})
     return job_id
+
+
+def scan_result(job_id: str, wait_s: float = 0) -> dict[str, Any]:
+    """A scan job's status, and its hot-spot site ids once it has finished. Waits up to wait_s for it to finish."""
+    deadline = time.monotonic() + max(0.0, wait_s)
+    while True:
+        with session() as conn:
+            row = conn.execute("SELECT status, result_json, error FROM jobs WHERE id = ?", (job_id,)).fetchone()
+        if row is None:
+            raise ValueError(f"no job {job_id}")
+        done = row["status"] in ("succeeded", "failed")
+        if done or time.monotonic() >= deadline:
+            out: dict[str, Any] = {"job_id": job_id, "status": row["status"]}
+            if row["status"] == "succeeded":
+                out["result"] = json.loads(row["result_json"] or "{}")
+            if row["status"] == "failed":
+                out["error"] = row["error"]
+            return out
+        time.sleep(2)
 
 
 def run_scan(job_id: str, params: dict[str, Any]) -> dict[str, Any]:
