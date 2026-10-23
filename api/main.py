@@ -24,6 +24,7 @@ from core.investigations import (
 )
 from core.imagery import analysis_layers, area_thumbnails
 from core.db import init_db, row_to_dict, session
+from core.discussion import DiscussionError, add_comment, list_comments
 from core.evidence import (
     EvidenceError,
     add_evidence,
@@ -325,6 +326,26 @@ def post_report_as_evidence(site_id: str, body: ReportEvidenceIn) -> dict[str, A
     try:
         return add_report_as_evidence(site_id, body.search_id, body.source_id, body.handle or "")
     except EvidenceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+class CommentIn(BaseModel):
+    body: str
+    handle: str | None = None
+    evidence_id: str | None = None
+
+
+@app.get("/sites/{site_id}/comments")
+def get_comments(site_id: str) -> list[dict[str, Any]]:
+    get_site(site_id)
+    return list_comments(site_id)
+
+
+@app.post("/sites/{site_id}/comments")
+def post_comment(site_id: str, body: CommentIn) -> dict[str, Any]:
+    try:
+        return add_comment(site_id, body.handle or "", body.body, body.evidence_id)
+    except DiscussionError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 

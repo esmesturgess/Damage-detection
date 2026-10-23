@@ -57,6 +57,16 @@ export type Evidence = {
   check: EvidenceCheck | null;
 };
 
+export type Comment = {
+  id: string;
+  site_id: string;
+  /** null: the site's open thread */
+  evidence_id: string | null;
+  author: string;
+  body: string;
+  created_at: string;
+};
+
 /** A documented incident from ACLED, as recorded. Never scored or judged. */
 export type PriorReport = {
   source: "acled" | "acled_sample";

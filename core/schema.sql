@@ -111,3 +111,17 @@ CREATE TABLE IF NOT EXISTS prior_report_searches (
 );
 
 CREATE INDEX IF NOT EXISTS idx_prior_searches_site ON prior_report_searches(site_id, created_at);
+
+-- Discussion. evidence_id null = the site's open thread. Append-only.
+CREATE TABLE IF NOT EXISTS comments (
+    id TEXT PRIMARY KEY,
+    site_id TEXT NOT NULL,
+    evidence_id TEXT,
+    author TEXT NOT NULL,
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (site_id) REFERENCES sites(id),
+    FOREIGN KEY (evidence_id) REFERENCES evidence(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_comments_site ON comments(site_id, created_at);

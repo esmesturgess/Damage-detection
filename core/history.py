@@ -56,6 +56,8 @@ def _summary(action: str, actor: str, payload: dict[str, Any]) -> str | None:
         found = payload.get("found", 0)
         sample = " (sample data)" if payload.get("source") == "acled_sample" else ""
         return f"{actor} searched ACLED within {payload.get('radius_km'):g} km{sample}: {found} report{'s' if found != 1 else ''}"
+    if action == "comment_added":
+        return f"{actor} commented" + (" on evidence" if payload.get("evidence_id") else "")
     if action == "evidence_added":
         kind = {"prior_report": "prior report"}.get(payload.get("kind"), payload.get("kind", "item"))
         return f"Evidence added ({kind})"

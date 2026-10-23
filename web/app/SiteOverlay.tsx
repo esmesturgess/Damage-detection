@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Discussion, { EvidenceComments } from "./Discussion";
 import PriorReports from "./PriorReports";
-import { levelInfo, siteCentre, type Evidence, type EvidenceCheck, type Reviewer, type Site } from "@/lib/types";
+import { levelInfo, siteCentre, type Comment, type Evidence, type EvidenceCheck, type Reviewer, type Site } from "@/lib/types";
 
 const LADDER = ["detected", "corroborated", "verified"] as const;
 
@@ -61,6 +62,7 @@ export default function SiteOverlay({
   const isInvestigation = site.kind === "investigation";
   const hotspots = useHotspots(isInvestigation ? site.id : null);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [msg, setMsg] = useState("");
   const [version, setVersion] = useState(0);
   const [adding, setAdding] = useState(false);
@@ -79,6 +81,10 @@ export default function SiteOverlay({
       (items) => !cancelled && setEvidence(items),
       () => !cancelled && setEvidence([]),
     );
+    fetch(`/api/sites/${site.id}/comments`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((items) => !cancelled && setComments(items))
+      .catch(() => !cancelled && setComments([]));
     return () => {
       cancelled = true;
     };
@@ -87,7 +93,7 @@ export default function SiteOverlay({
   async function act(fn: () => Promise<unknown>, done: string): Promise<boolean> {
     try {
       await fn();
-      setMsg(done);
+      if (done) setMsg(done);
       setVersion((n) => n + 1);
       onChanged();
       return true;
@@ -233,6 +239,10 @@ export default function SiteOverlay({
                     item={item}
                     others={evidence.filter((e) => e.id !== item.id)}
                     reviewer={reviewer}
+                    comments={comments.filter((c) => c.evidence_id === item.id)}
+                    handle={handle}
+                    onHandle={onHandle}
+                    onComment={(body) => act(() => post(`/api/sites/${site.id}/comments`, { body, handle, evidence_id: item.id }), "")}
                     onCheck={(check) =>
                       act(() => post(`/api/evidence/${item.id}/check`, check, reviewerHeaders(reviewer)), "Check saved.")
                     }
@@ -241,12 +251,15 @@ export default function SiteOverlay({
               </ul>
             </section>
 
-            <section>
-              <h2 className="mb-3 text-[18px] font-semibold">Discussion</h2>
-              <p className="muted rounded-xl border border-dashed border-[var(--line)] px-4 py-6 text-center">
-                Comments on each evidence item and an open thread for this site are coming next.
-              </p>
-            </section>
+            <Discussion
+              question={site.question}
+              askedBy={site.created_by}
+              askedAt={site.created_at}
+              comments={comments.filter((c) => c.evidence_id === null)}
+              handle={handle}
+              onHandle={onHandle}
+              onPost={(body) => act(() => post(`/api/sites/${site.id}/comments`, { body, handle }), "")}
+            />
           </div>
 
           {/* Right rail: the verdict so far, readings and actions */}
@@ -665,11 +678,19 @@ function EvidenceItem({
   item,
   others,
   reviewer,
+  comments,
+  handle,
+  onHandle,
+  onComment,
   onCheck,
 }: {
   item: Evidence;
   others: Evidence[];
   reviewer: Reviewer;
+  comments: Comment[];
+  handle: string;
+  onHandle: (h: string) => void;
+  onComment: (body: string) => Promise<boolean>;
   onCheck: (check: Omit<EvidenceCheck, "reviewer" | "created_at">) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -713,6 +734,7 @@ function EvidenceItem({
           }}
         />
       ) : null}
+      <EvidenceComments comments={comments} handle={handle} onHandle={onHandle} onPost={onComment} />
     </li>
   );
 }

@@ -29,6 +29,7 @@ const LEVEL_COLOR = Object.fromEntries(LEVELS.map((l) => [l.id, l.color])) as Re
 const BRICK = "#a8442f";
 const AREA_OPACITY = 0.85;
 const INTRO_SEEN = "burn-evidence:intro-seen";
+const HANDLE = "burn-evidence:handle";
 const EXAMPLE = { lat: 20.82, lon: 92.38, range: [monthIndex(2017, 7), monthIndex(2017, 8)] as [number, number] };
 const SITE_BOX_KM = 3;
 const COORD_BOX_KM = 5;
@@ -149,7 +150,22 @@ export default function MapApp() {
       /* storage unavailable: don't nag */
     }
     if (!seen) queueMicrotask(() => setIntroOpen(true));
+    try {
+      const saved = localStorage.getItem(HANDLE);
+      if (saved) queueMicrotask(() => setHandle(saved));
+    } catch {
+      /* storage unavailable: ask each time */
+    }
   }, []);
+
+  function rememberHandle(h: string) {
+    setHandle(h);
+    try {
+      localStorage.setItem(HANDLE, h);
+    } catch {
+      /* storage unavailable */
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -750,7 +766,7 @@ export default function MapApp() {
           site={selected}
           handle={handle}
           reviewer={reviewer}
-          onHandle={setHandle}
+          onHandle={rememberHandle}
           onClose={() => window.history.pushState(null, "", "/")}
           onChanged={loadSites}
           parent={sites.find((x) => x.id === selected.parent_id) ?? null}
