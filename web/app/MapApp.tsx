@@ -627,7 +627,7 @@ export default function MapApp() {
 
       {/* Name block, top left. Room for a logo. */}
       <div className={`${CHROME} on-paper absolute left-4 top-4 flex h-[86px] w-[248px] items-center gap-3 border border-[var(--rule)] px-4`}>
-        <h1 className="display flex-1 text-[22px] font-semibold leading-[1.05]">Burn and change detection</h1>
+        <h1 className="display flex-1 text-[22px] font-semibold leading-[1.05]">Corroborator</h1>
         <button className="link self-start pt-3 text-[12px]" onClick={() => setIntroOpen(true)}>
           Help
         </button>
