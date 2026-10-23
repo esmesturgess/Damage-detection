@@ -35,7 +35,7 @@ async function post(path: string, body: unknown, headers: Record<string, string>
   return data;
 }
 
-export default function LocationPanel({
+export default function SiteOverlay({
   site,
   handle,
   reviewer,
@@ -56,6 +56,12 @@ export default function LocationPanel({
   const [adding, setAdding] = useState(false);
   const v = site.verification;
   const info = levelInfo(v.level);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,15 +87,52 @@ export default function LocationPanel({
     }
   }
 
-  return (
-    <aside className="panel absolute bottom-4 right-4 top-[104px] w-[24rem] overflow-auto p-5">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <h2 className="text-[15px] font-semibold leading-snug">{site.name ?? site.id}</h2>
-        <button className="muted -mr-1 -mt-1 px-1 text-[18px] leading-none hover:text-white" onClick={onClose} aria-label="Close">
-          ×
-        </button>
-      </div>
+  const [lon, lat] = site.geometry.coordinates;
+  const window_ = (site.timestamps as { event_window?: string[] } | null)?.event_window;
 
+  return (
+    <div className="on-brick fixed inset-0 z-30 overflow-auto" role="dialog" aria-modal="true" aria-label={site.name ?? "Site"}>
+      <header className="sticky top-0 z-10 border-b border-[var(--line)] bg-[var(--brick-bg)] px-8 py-4">
+        <div className="mx-auto flex max-w-4xl items-center gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-[20px] font-semibold tracking-tight">{site.name ?? site.id}</h1>
+            <p className="muted num text-[12px]">
+              {lat.toFixed(4)}, {lon.toFixed(4)}
+              {window_ ? ` · ${window_[0]} → ${window_[1]}` : ""}
+              {" · "}
+              <button
+                className="link"
+                onClick={() => {
+                  navigator.clipboard?.writeText(window.location.href).then(
+                    () => setMsg("Link copied."),
+                    () => setMsg(window.location.href),
+                  );
+                }}
+              >
+                copy link
+              </button>
+            </p>
+          </div>
+          <span className="flex items-center gap-2 rounded-full bg-black/25 px-3 py-1">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: info.color }} />
+            {info.label}
+          </span>
+          <button
+            className="flex h-10 w-10 items-center justify-center rounded-full text-[26px] leading-none hover:bg-white/10"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-4xl space-y-10 px-8 py-8">
+      <SiteImagery siteId={site.id} />
+
+      <section className="grid gap-6 md:grid-cols-2">
+      <div>
+      <div className="eyebrow mb-2">Verification</div>
       {/* Level */}
       <div className="mb-6 rounded-lg border p-3.5" style={{ borderColor: info.color + "55", background: info.color + "10" }}>
         <div className="mb-1 flex items-center gap-2">
@@ -121,7 +164,9 @@ export default function LocationPanel({
         </div>
       </div>
 
+      </div>
       <SatelliteReading site={site} onChanged={onChanged} />
+      </section>
 
       {/* Evidence */}
       <section className="mb-6">
@@ -212,9 +257,125 @@ export default function LocationPanel({
         </section>
       ) : null}
 
-      {msg ? <p className="rounded-lg bg-[var(--accent-soft)] px-3 py-2 text-[var(--accent-text)]">{msg}</p> : null}
-      {site.is_demo ? <p className="faint mt-3 text-[12px]">Demo location: synthetic data, not a finding.</p> : null}
-    </aside>
+      <section>
+        <div className="eyebrow mb-2">Discussion</div>
+        <p className="muted rounded-lg border border-dashed border-[var(--line)] px-4 py-6 text-center">
+          Comments on each evidence item and an open thread for this site are coming next.
+        </p>
+      </section>
+
+      <SiteHistory siteId={site.id} version={version} />
+
+      {site.is_demo ? <p className="faint text-[12px]">Demo location: synthetic data, not a finding.</p> : null}
+      </main>
+
+      {msg ? (
+        <div className="fixed bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-full bg-[#f4efe6] px-4 py-2 text-[#5a2318] shadow-lg">
+          {msg}
+          <button className="ml-3 opacity-60 hover:opacity-100" onClick={() => setMsg("")} aria-label="Dismiss">
+            ×
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const IMAGES = [
+  { id: "before", label: "Before" },
+  { id: "after", label: "After" },
+  { id: "change", label: "After + radar change" },
+  { id: "burn", label: "After + burn signal" },
+] as const;
+
+type SiteImages = {
+  layers: Partial<Record<(typeof IMAGES)[number]["id"], { url: string }>>;
+  optical: { before_window?: { start: string; end: string }; after_window?: { start: string; end: string } };
+  notes: string[];
+};
+
+function SiteImagery({ siteId }: { siteId: string }) {
+  const [state, setState] = useState<{ siteId: string; data?: SiteImages; error?: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/sites/${siteId}/imagery`)
+      .then(async (res) => {
+        const data = await res.json();
+        if (cancelled) return;
+        setState(res.ok ? { siteId, data } : { siteId, error: data.detail ?? "Couldn't load imagery." });
+      })
+      .catch(() => !cancelled && setState({ siteId, error: "Couldn't load imagery." }));
+    return () => {
+      cancelled = true;
+    };
+  }, [siteId]);
+
+  const current = state?.siteId === siteId ? state : null;
+  return (
+    <section>
+      <div className="eyebrow mb-2">Imagery</div>
+      {current?.error ? <p className="muted">{current.error}</p> : null}
+      <div className="grid grid-cols-2 gap-3">
+        {IMAGES.map((img) => {
+          const url = current?.data?.layers[img.id]?.url;
+          const w = img.id === "before" ? current?.data?.optical.before_window : current?.data?.optical.after_window;
+          return (
+            <figure key={img.id}>
+              <div className="aspect-square overflow-hidden rounded-lg bg-black/25">
+                {url ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- Earth Engine thumbnails, not static assets
+                  <img src={url} alt={img.label} className="h-full w-full object-cover" />
+                ) : current?.error ? null : (
+                  <div className="flex h-full items-center justify-center">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-white/60" />
+                  </div>
+                )}
+              </div>
+              <figcaption className="mt-1.5 flex justify-between text-[12px]">
+                <span>{img.label}</span>
+                {w ? <span className="faint num">{w.start} → {w.end}</span> : null}
+              </figcaption>
+            </figure>
+          );
+        })}
+      </div>
+      {current?.data?.notes.map((n) => (
+        <p key={n} className="muted mt-2 text-[12px]">
+          {n}
+        </p>
+      ))}
+    </section>
+  );
+}
+
+function SiteHistory({ siteId, version }: { siteId: string; version: number }) {
+  const [events, setEvents] = useState<{ at: string; summary: string }[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/sites/${siteId}/history`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => !cancelled && setEvents(data))
+      .catch(() => !cancelled && setEvents([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [siteId, version]);
+
+  return (
+    <section>
+      <div className="eyebrow mb-2">History</div>
+      {events.length === 0 ? <p className="muted">No recorded activity yet.</p> : null}
+      <ol className="space-y-1.5">
+        {events.map((e, i) => (
+          <li key={i} className="flex gap-4">
+            <span className="faint num w-36 shrink-0 text-[12px]">{e.at.slice(0, 16).replace("T", " ")}</span>
+            <span>{e.summary}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   Map,
   GeoJSONSource,
@@ -13,7 +14,7 @@ import {
 import { LEVELS, type Level, type Reviewer, type Site } from "@/lib/types";
 import AreaLayers, { AREA_LAYERS, type AreaLayerId, type Analysis } from "./AreaLayers";
 import Intro from "./Intro";
-import LocationPanel from "./LocationPanel";
+import SiteOverlay from "./SiteOverlay";
 import TimeBar, { label, monthIndex, windows } from "./TimeBar";
 
 // MapLibre 6 resolves its worker relative to import.meta.url, which breaks once
@@ -97,7 +98,11 @@ export default function MapApp() {
   const [mapReady, setMapReady] = useState(false);
   const [sites, setSites] = useState<Site[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // The open site lives in the URL (/sites/<id>), so links can be shared and
+  // the back button closes the overlay.
+  const pathname = usePathname();
+  const selectedId = pathname?.match(/^\/sites\/([^/]+)/)?.[1] ?? null;
+  const fitOnLoad = useRef<GeoJSON.Polygon | null>(null);
   const [showDetected, setShowDetected] = useState(true);
   const [introOpen, setIntroOpen] = useState(false);
   const [range, setRange] = useState<[number, number]>([monthIndex(2017, 7), monthIndex(2017, 8)]);
@@ -149,6 +154,19 @@ export default function MapApp() {
         if (cancelled) return;
         setSites(s);
         setError(null);
+        const linked = s.find((site) => window.location.pathname === `/sites/${site.id}`);
+        if (linked) {
+          const [lon, lat] = linked.geometry.coordinates;
+          const box = boxAround(lat, lon, SITE_BOX_KM);
+          setAoi(box);
+          const map = mapRef.current;
+          if (map?.loaded()) {
+            const [sw, , ne] = box.coordinates[0];
+            map.fitBounds([sw as [number, number], ne as [number, number]], { padding: 160, maxZoom: 12, duration: 0 });
+          } else {
+            fitOnLoad.current = box; // the map's load handler applies it
+          }
+        }
       },
       () => {
         if (!cancelled) setError(API_DOWN);
@@ -239,6 +257,10 @@ export default function MapApp() {
           // Sites usually arrive before the style finishes loading; effects below
           // wait on this so the data and handlers land on layers that exist.
           setMapReady(true);
+          if (fitOnLoad.current) {
+            const [sw, , ne] = fitOnLoad.current.coordinates[0];
+            map.fitBounds([sw as [number, number], ne as [number, number]], { padding: 160, maxZoom: 12, duration: 0 });
+          }
         });
 
       })
@@ -259,7 +281,7 @@ export default function MapApp() {
       const feature = ev.features?.[0];
       const id = feature?.properties?.id as string | undefined;
       if (!id || feature?.geometry.type !== "Point") return;
-      setSelectedId(id);
+      window.history.pushState(null, "", `/sites/${id}`);
       const [lon, lat] = feature.geometry.coordinates;
       setAoi(boxAround(lat, lon, SITE_BOX_KM));
     };
@@ -640,12 +662,12 @@ export default function MapApp() {
       </aside>
 
       {selected ? (
-        <LocationPanel
+        <SiteOverlay
           site={selected}
           handle={handle}
           reviewer={reviewer}
           onHandle={setHandle}
-          onClose={() => setSelectedId(null)}
+          onClose={() => window.history.pushState(null, "", "/")}
           onChanged={loadSites}
         />
       ) : null}

@@ -75,3 +75,19 @@ def in_rakhine(geom: BaseGeometry) -> bool:
 
 def calibration_status_for(geom: BaseGeometry) -> str:
     return "validated" if in_rakhine(geom) else "provisional"
+
+
+def box_around(lon: float, lat: float, size_km: float) -> dict[str, Any]:
+    """Square polygon of side size_km centred on a point (same maths as the web map)."""
+    import math
+
+    d_lat = size_km / 2 / 110.57
+    d_lon = size_km / 2 / (111.32 * math.cos(math.radians(lat)))
+    ring = [
+        [lon - d_lon, lat - d_lat],
+        [lon + d_lon, lat - d_lat],
+        [lon + d_lon, lat + d_lat],
+        [lon - d_lon, lat + d_lat],
+        [lon - d_lon, lat - d_lat],
+    ]
+    return {"type": "Polygon", "coordinates": [ring]}

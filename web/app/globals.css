@@ -219,3 +219,32 @@ button:disabled {
 .link:hover {
   text-decoration: underline;
 }
+
+/* Site overlay: full-screen brick, cream text. The shared tokens are
+   re-pointed so buttons, fields and switches read on brick. */
+.on-brick {
+  --brick-bg: #6a2a1d;
+  --muted: rgba(244, 239, 230, 0.74);
+  --faint: rgba(244, 239, 230, 0.52);
+  --line: rgba(255, 255, 255, 0.16);
+  --field: rgba(0, 0, 0, 0.22);
+  --accent-text: #ffd9cc;
+  --accent-soft: rgba(255, 255, 255, 0.14);
+  background: var(--brick-bg);
+  color: #f4efe6;
+}
+.on-brick .btn-primary {
+  background: #f4efe6;
+  border-color: #f4efe6;
+  color: #5a2318;
+}
+.on-brick .btn-primary:hover:not(:disabled) {
+  background: #fff;
+  border-color: #fff;
+}
+.on-brick .switch:checked {
+  background: #f4efe6;
+}
+.on-brick .switch:checked::after {
+  background: var(--brick-bg);
+}

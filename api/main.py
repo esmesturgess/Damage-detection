@@ -12,7 +12,8 @@ from core.burn import classify_burn
 from core.config import settings
 from core.coverage import check_coverage
 from core.gee import GeeUnavailable
-from core.imagery import analysis_layers
+from core.history import site_history
+from core.imagery import analysis_layers, area_thumbnails
 from core.db import init_db, row_to_dict, session
 from core.evidence import (
     EvidenceError,
@@ -185,6 +186,43 @@ def get_site(site_id: str) -> dict[str, Any]:
             raise HTTPException(status_code=404, detail="site not found")
         site["verification"] = verification(conn, site_id)
     return site
+
+
+SITE_BOX_KM = 3
+
+
+@app.get("/sites/{site_id}/imagery")
+def site_imagery(site_id: str) -> dict[str, Any]:
+    """Before/after/change/burn images of a site's 3 km box for its own dates."""
+    from datetime import date, timedelta
+
+    from core.geo import box_around
+
+    site = get_site(site_id)
+    lon, lat = site["geometry"]["coordinates"][:2]
+    window = (site.get("timestamps") or {}).get("event_window")
+    if not window:
+        raise HTTPException(status_code=404, detail="This site has no event window to show imagery for.")
+    baseline = (site.get("timestamps") or {}).get("baseline_window")
+    if not baseline:
+        start = date.fromisoformat(window[0])
+        baseline = [(start - timedelta(days=365)).isoformat(), (start - timedelta(days=1)).isoformat()]
+    try:
+        return area_thumbnails(
+            box_around(lon, lat, SITE_BOX_KM),
+            {"start": baseline[0], "end": baseline[1]},
+            {"start": window[0], "end": window[1]},
+        )
+    except GeeUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:  # Earth Engine computation errors
+        raise HTTPException(status_code=502, detail=f"Earth Engine error: {exc}") from exc
+
+
+@app.get("/sites/{site_id}/history")
+def get_history(site_id: str) -> list[dict[str, Any]]:
+    get_site(site_id)  # 404 if missing
+    return site_history(site_id)
 
 
 @app.get("/sites/{site_id}/evidence")

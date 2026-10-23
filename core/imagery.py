@@ -36,18 +36,49 @@ def analysis_layers(
     baseline_window: dict[str, str],
     event_window: dict[str, str],
 ) -> dict[str, Any]:
+    """Map tile URLs for the change, burn, before and after layers of one area."""
+    return _cached("tiles", aoi_geojson, baseline_window, event_window, lambda img, _aoi: _tiles(img))
+
+
+def area_thumbnails(
+    aoi_geojson: str | dict[str, Any],
+    baseline_window: dict[str, str],
+    event_window: dict[str, str],
+) -> dict[str, Any]:
+    """Still images of one area: before, after, and after with change or burn drawn on top."""
+
+    def thumbs(images: dict[str, Any], aoi: dict[str, Any]) -> dict[str, Any]:
+        out = {}
+        for name in ("before", "after"):
+            if name in images:
+                out[name] = _thumb(images[name], aoi)
+        for name in ("change", "burn"):
+            if name in images:
+                base = images.get("after")
+                out[name] = _thumb(base.blend(images[name]) if base is not None else images[name], aoi)
+        return out
+
+    return _cached("thumbs", aoi_geojson, baseline_window, event_window, thumbs, per_image=False)
+
+
+def _cached(kind, aoi_geojson, baseline, event, render, per_image: bool = True) -> dict[str, Any]:
     geom = parse_geometry(aoi_geojson)
     assert_aoi_size(geom)
-    key = json.dumps([geojson_of(geom), baseline_window, event_window], sort_keys=True)
+    key = json.dumps([kind, geojson_of(geom), baseline, event], sort_keys=True)
     hit = _cache.get(key)
     if hit and time.time() - hit[0] < _TTL_S:
         return hit[1]
-    result = _build(geojson_of(geom), baseline_window, event_window)
+    built = _images(geojson_of(geom), baseline, event)
+    images = built.pop("images")
+    aoi = geojson_of(geom)
+    rendered = {name: render(img, aoi) for name, img in images.items()} if per_image else render(images, aoi)
+    result = {"layers": rendered, **built}
     _cache[key] = (time.time(), result)
     return result
 
 
-def _build(aoi: dict[str, Any], baseline: dict[str, str], event: dict[str, str]) -> dict[str, Any]:
+def _images(aoi: dict[str, Any], baseline: dict[str, str], event: dict[str, str]) -> dict[str, Any]:
+    """Visualised (RGB) Earth Engine images for one area, plus what they were built from."""
     initialize()
     import ee
 
@@ -55,7 +86,7 @@ def _build(aoi: dict[str, Any], baseline: dict[str, str], event: dict[str, str])
 
     region = ee.Geometry(aoi)
     notes: list[str] = []
-    layers: dict[str, Any] = {}
+    images: dict[str, Any] = {}
 
     # Structural change: Pixel-Wise T-Test on Sentinel-1, built-up areas only.
     ev_start, ev_end = date.fromisoformat(event["start"]), date.fromisoformat(event["end"])
@@ -67,7 +98,7 @@ def _build(aoi: dict[str, Any], baseline: dict[str, str], event: dict[str, str])
         pre_interval=max(1, round((ev_start - bl_start).days / 30.44)),
         post_interval=max(1, round((ev_end - ev_start).days / 30.44)),
     ).select("T_statistic")
-    layers["change"] = _tiles(change.updateMask(change.gte(3)), CHANGE_VIS)
+    images["change"] = change.updateMask(change.gte(3)).visualize(**CHANGE_VIS)
 
     # Optical: same product on both sides, L2A preferred (the burn detector's
     # training data), L1C where Earth Engine's L2A archive has gaps.
@@ -86,10 +117,10 @@ def _build(aoi: dict[str, Any], baseline: dict[str, str], event: dict[str, str])
         product, pre_n, post_n = optical
         pre = clear_scenes(product, region, baseline["start"], baseline["end"]).median().clip(region)
         post = clear_scenes(product, region, event["start"], post_end.isoformat()).median().clip(region)
-        layers["before"] = _tiles(pre, TRUE_COLOUR)
-        layers["after"] = _tiles(post, TRUE_COLOUR)
+        images["before"] = pre.visualize(**TRUE_COLOUR)
+        images["after"] = post.visualize(**TRUE_COLOUR)
         dnbr = pre.normalizedDifference(["B8", "B12"]).subtract(post.normalizedDifference(["B8", "B12"]))
-        layers["burn"] = _tiles(dnbr.updateMask(dnbr.gte(0.1)), BURN_VIS)
+        images["burn"] = dnbr.updateMask(dnbr.gte(0.1)).visualize(**BURN_VIS)
         optical_info = {
             "product": "L2A" if product == L2A else "L1C",
             "provisional": product == L1C,
@@ -101,7 +132,7 @@ def _build(aoi: dict[str, Any], baseline: dict[str, str], event: dict[str, str])
         if product == L1C:
             notes.append("Burn layer uses Level-1C (top of atmosphere): the burn detector was trained on Level-2A, so read it as provisional.")
 
-    return {"layers": layers, "optical": optical_info, "notes": notes}
+    return {"images": images, "optical": optical_info, "notes": notes}
 
 
 def clear_scenes(collection: str, region, start: str, end: str):
@@ -136,5 +167,10 @@ def pick_product(region, pre_start: str, pre_end: str, post_start: str, post_end
     return None
 
 
-def _tiles(image, vis: dict[str, Any]) -> dict[str, str]:
-    return {"url": image.getMapId(vis)["tile_fetcher"].url_format}
+def _tiles(image) -> dict[str, str]:
+    return {"url": image.getMapId()["tile_fetcher"].url_format}
+
+
+def _thumb(image, region: dict[str, Any]) -> dict[str, str]:
+    # Frame to the area explicitly: some layers (PWTT) have a larger footprint.
+    return {"url": image.getThumbURL({"region": region, "dimensions": 640, "format": "png"})}
