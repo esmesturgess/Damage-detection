@@ -95,27 +95,24 @@ export default function PriorReports({
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3 bg-[var(--accent-soft)] px-3.5 py-2.5 text-[12px]">
             <span className="muted leading-snug">
               Searched within {search.searched.radius_km} km, {day(search.searched.dates_searched[0])} –{" "}
-              {day(search.searched.dates_searched[1])} (your dates and a month either side) · {search.searched_by} ·{" "}
+              {day(search.searched.dates_searched[1])} · {search.searched_by} ·{" "}
               {search.searched_at.slice(0, 16).replace("T", " ")}
             </span>
             {controls}
           </div>
           {search.searched.source === "acled_sample" ? (
             <p className="mb-3 border border-[var(--accent)] px-3.5 py-2 text-[12px] text-[var(--accent)] font-semibold">
-              Sample data: these records are fictional, for trying the interface. They are not ACLED data.
+              Sample data, not ACLED records.
             </p>
           ) : null}
           {search.truncated ? (
             <p className="mb-3 border border-[var(--accent)] px-3.5 py-2 text-[12px] text-[var(--accent)] font-semibold">
-              Too many results: some were left out. Search a smaller radius.
+              Some results left out. Search a smaller radius.
             </p>
           ) : null}
           {search.reports.length === 0 ? (
             <p className="muted border border-dashed border-[var(--line)] px-4 py-6 text-center leading-snug">
               No ACLED reports within {search.searched.radius_km} km at this time.
-              <span className="faint block text-[12px]">
-                That isn&apos;t evidence nothing happened: ACLED only records what was reported.
-              </span>
             </p>
           ) : (
             <ul>
@@ -137,7 +134,7 @@ export default function PriorReports({
         </>
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3 border border-dashed border-[var(--line)] px-4 py-4">
-          <span className="muted">Not searched yet. The place and dates are sent to ACLED.</span>
+          <span className="muted">Not searched yet.</span>
           {controls}
         </div>
       )}

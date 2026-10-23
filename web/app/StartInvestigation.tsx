@@ -118,10 +118,10 @@ export default function StartInvestigation({
         {context ? <p className="faint -mt-2 mb-4 text-[12px]">{context} · from OpenStreetMap</p> : null}
 
         <label className="mb-5 block">
-          <span className="muted mb-1 block text-[12px]">Question or prompt for the discussion (optional)</span>
+          <span className="muted mb-1 block text-[12px]">Question (optional)</span>
           <textarea
             className="field h-20"
-            placeholder="e.g. Reports say villages east of town were burned in late August. Can we confirm?"
+            placeholder="e.g. Were villages east of town burned in late August?"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
           />

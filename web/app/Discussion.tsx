@@ -30,7 +30,7 @@ export default function Discussion({
         ))}
       </ol>
       {comments.length === 0 ? (
-        <p className="muted mb-3">Nothing said yet. Start the conversation.</p>
+        <p className="muted mb-3">Nothing yet.</p>
       ) : null}
       <Composer handle={handle} onHandle={onHandle} onPost={onPost} placeholder="Add to the discussion" />
     </section>

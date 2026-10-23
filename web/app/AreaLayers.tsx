@@ -67,7 +67,6 @@ export default function AreaLayers({
     <div className="space-y-2.5">
       <LayerRow
         title="Radar change"
-        summary="Where radar echoes from built-up land changed most against the year before. Any strong change, not only damage."
         on={on.change}
         disabled={!layers.change}
         onToggle={(v) => onToggle("change", v)}
@@ -99,7 +98,6 @@ export default function AreaLayers({
       </LayerRow>
       <LayerRow
         title="Burn signal"
-        summary="Where land changed in the way fire changes it, against the year before. Harvest and clearing can look the same."
         on={on.burn}
         disabled={!layers.burn}
         onToggle={(v) => onToggle("burn", v)}
@@ -121,7 +119,7 @@ export default function AreaLayers({
         </p>
       </LayerRow>
       {optical.provisional && optical.product ? (
-        <p className="muted text-[12px]">Burn signal from Level-1C imagery (no atmospheric correction): less reliable.</p>
+        <p className="muted text-[12px]">Burn signal from Level-1C imagery: less reliable.</p>
       ) : null}
 
       <div className="flex items-center gap-2">
@@ -168,7 +166,6 @@ export default function AreaLayers({
 
 function LayerRow({
   title,
-  summary,
   on,
   disabled,
   onToggle,
@@ -176,7 +173,6 @@ function LayerRow({
   children,
 }: {
   title: string;
-  summary: string;
   on: boolean;
   disabled: boolean;
   onToggle: (v: boolean) => void;
@@ -200,8 +196,7 @@ function LayerRow({
         ))}
       </span>
       </label>
-      <p className="muted mt-1 pl-[21px] text-[12px] leading-snug">{summary}</p>
-      <details className="pl-[21px] text-[12px]">
+      <details className="mt-0.5 pl-[21px] text-[12px]">
         <summary className="link cursor-pointer list-none">How it&apos;s calculated</summary>
         <div className="mt-1.5 space-y-1.5 leading-snug">{children}</div>
       </details>

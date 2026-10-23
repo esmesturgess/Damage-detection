@@ -335,8 +335,14 @@ export default function MapApp() {
     };
   }, [mapReady]);
 
-  const fc = useMemo(() => toFeatureCollection(sites), [sites]);
-  const invFc = useMemo(() => investigationsCollection(sites), [sites]);
+  // The map shows what happened in the time bar's range: sites whose event window overlaps it.
+  const shown = useMemo(() => {
+    const event = (JSON.parse(winKey) as ReturnType<typeof windows>).event;
+    return sites.filter((s) => overlapsWindow(s, event));
+  }, [sites, winKey]);
+  const outsideDates = sites.length - shown.length;
+  const fc = useMemo(() => toFeatureCollection(shown), [shown]);
+  const invFc = useMemo(() => investigationsCollection(shown), [shown]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -617,9 +623,9 @@ export default function MapApp() {
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
-    for (const s of sites) c[s.verification.level] = (c[s.verification.level] ?? 0) + 1;
+    for (const s of shown) c[s.verification.level] = (c[s.verification.level] ?? 0) + 1;
     return c;
-  }, [sites]);
+  }, [shown]);
 
   return (
     <div className="relative h-full w-full">
@@ -664,7 +670,7 @@ export default function MapApp() {
           >
             {drawing ? "Cancel drawing" : aoi ? "Draw a new box" : "Draw a box"}
           </button>
-          {drawing ? <p className="muted mt-2 text-[12px]">Drag on the map to draw the box. Esc cancels.</p> : null}
+          {drawing ? <p className="muted mt-2 text-[12px]">Drag to draw. Esc cancels.</p> : null}
           {aoi && !drawing ? (
             <div className="mt-2 flex justify-between text-[12px]">
               <button className="link" onClick={runScan} disabled={scanStatus === "scanning"}>
@@ -733,6 +739,11 @@ export default function MapApp() {
               </label>
             ) : null}
           </div>
+          {outsideDates ? (
+            <p className="faint mt-2 text-[12px]">
+              {outsideDates} {outsideDates === 1 ? "site" : "sites"} outside these dates
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -784,6 +795,12 @@ function LevelMark({ level }: { level: (typeof LEVELS)[number] }) {
       style={{ background: level.fill, border: `1px solid ${stroke}` }}
     />
   );
+}
+
+function overlapsWindow(site: Site, window: { start: string; end: string }): boolean {
+  const ew = (site.timestamps as { event_window?: string[] } | null)?.event_window;
+  if (!ew || ew.length < 2) return true; // undated sites always show
+  return ew[0] <= window.end && ew[1] >= window.start;
 }
 
 function rectangle([x0, y0]: [number, number], [x1, y1]: [number, number]): GeoJSON.Polygon {

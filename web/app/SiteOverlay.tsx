@@ -210,7 +210,7 @@ export default function SiteOverlay({
               onAdd={(searchId, sourceId) =>
                 act(
                   () => post(`/api/sites/${site.id}/prior-reports/evidence`, { search_id: searchId, source_id: sourceId, handle }),
-                  "Added as evidence. A colleague will check it.",
+                  "Added as evidence.",
                 )
               }
               onSearched={() => setVersion((n) => n + 1)}
@@ -240,7 +240,7 @@ export default function SiteOverlay({
               ) : null}
               {evidence.length === 0 && !adding ? (
                 <p className="muted border border-dashed border-[var(--line)] px-4 py-6 text-center">
-                  No evidence yet. Links, testimony, photos and video all help.
+                  No evidence yet.
                 </p>
               ) : null}
               <ul>
@@ -313,7 +313,9 @@ export default function SiteOverlay({
               <p className="mt-3 leading-snug">{v.why}</p>
             </section>
 
-            {isInvestigation ? null : <SatelliteReading site={site} onChanged={onChanged} />}
+            {isInvestigation ? null : <SatelliteReading site={site} />}
+
+            <EarthquakeCheck site={site} onChanged={onChanged} />
 
             <section>
                 <div className="eyebrow mb-2">Your verdict</div>
@@ -339,12 +341,9 @@ export default function SiteOverlay({
                     </button>
                   ))}
                 </div>
-                <p className="muted text-[12px] leading-snug">
-                  Sign-off counts only with 2+ independent sources, from someone who checked none of them.
-                </p>
               </section>
 
-            {site.is_demo ? <p className="faint text-[12px]">Demo location: synthetic data, not a finding.</p> : null}
+            {site.is_demo ? <p className="faint text-[12px]">Demo data</p> : null}
           </aside>
         </div>
 
@@ -499,10 +498,10 @@ function useHotspots(investigationId: string | null): Site[] {
 function HotspotList({ hotspots, onOpen }: { hotspots: Site[]; onOpen: (id: string) => void }) {
   return (
     <section>
-      <h2 className="section-title">Hot-spots in this area</h2>
+      <h2 className="section-title">Radar hot-spots in this area</h2>
       {hotspots.length === 0 ? (
         <p className="muted border border-dashed border-[var(--line)] px-4 py-5 text-center">
-          No hot-spots yet. Close this page and press “Scan for change”.
+          None yet. Scan this area from the map.
         </p>
       ) : (
         <ol className="divide-y divide-[var(--line)] border-b border-[var(--line)]">
@@ -567,45 +566,48 @@ function SiteHistory({ siteId, version }: { siteId: string; version: number }) {
   );
 }
 
-function SatelliteReading({ site, onChanged }: { site: Site; onChanged: () => void }) {
+function SatelliteReading({ site }: { site: Site }) {
   const features = Object.entries(site.features ?? {}).filter(([, value]) => value != null);
+  return (
+    <section>
+      <div className="eyebrow mb-2">Satellite readings</div>
+      <dl className="divide-y divide-[var(--line)] border-y border-[var(--rule)]">
+        <div className="flex justify-between gap-3 py-1.5">
+          <dt className="muted">Radar change strength</dt>
+          <dd className="num">{site.pwtt_z != null ? site.pwtt_z.toFixed(1) : "—"}</dd>
+        </div>
+        {features.map(([k, value]) => (
+          <div key={k} className="flex justify-between gap-3 py-1.5">
+            <dt className="muted">{FEATURE_LABELS[k] ?? k}</dt>
+            <dd className="num">{Number(value).toFixed(k === "hotspot_area_ha" ? 1 : 2)}</dd>
+          </div>
+        ))}
+      </dl>
+      {site.optical_read === "cloud_gap" ? <p className="muted mt-2 text-[12px]">No clear optical image: no burn readings.</p> : null}
+      {site.calibration_status === "provisional" ? (
+        <p className="muted mt-2 text-[12px]">Burn readings provisional outside Rakhine.</p>
+      ) : null}
+    </section>
+  );
+}
+
+/** USGS earthquakes near the site in its window. Not run on burn-positive sites, so shaking can't explain burning away. */
+function EarthquakeCheck({ site, onChanged }: { site: Site; onChanged: () => void }) {
   const seismic = site.seismic as {
     flag?: string;
     events?: { magnitude?: number; place?: string; modelled_mmi?: number | null }[];
   } | null;
   const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
   const top = seismic?.events?.[0];
 
   return (
-    <section className="mb-6">
-      <div className="eyebrow mb-2">What the satellite measured</div>
-      <ul className="mb-3 space-y-1 leading-snug">
-        <li>
-          Radar change strength <span className="num font-bold">{site.pwtt_z != null ? site.pwtt_z.toFixed(1) : "—"}</span>
-        </li>
-        <li>
-          {site.optical_read === "cloud_gap"
-            ? "No clear optical image, so there are no burn readings."
-            : "Clear optical image for the burn readings."}
-        </li>
-        {site.calibration_status === "provisional" ? (
-          <li>Outside Rakhine, where the burn model was trained, so treat burn readings as rough.</li>
-        ) : null}
-      </ul>
-      {features.length ? (
-        <dl className="mb-3 divide-y divide-[var(--line)] border-y border-[var(--rule)]">
-          {features.map(([k, value]) => (
-            <div key={k} className="flex justify-between gap-3 py-1.5">
-              <dt className="muted">{FEATURE_LABELS[k] ?? k}</dt>
-              <dd className="num">{Number(value).toFixed(k === "hotspot_area_ha" ? 1 : 2)}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : null}
+    <section>
+      <div className="eyebrow mb-2">Earthquakes</div>
       {seismic?.flag ? (
         <p className="leading-snug">
-          <span className={seismic.flag === "possible_seismic" ? "text-[var(--accent)]" : "muted"}>
-            {seismic.flag === "possible_seismic" ? "Possible earthquake cause" : "No damaging earthquake found"}
+          <span className={seismic.flag === "possible_seismic" ? "font-semibold" : "muted"}>
+            {seismic.flag === "possible_seismic" ? "Damaging earthquake nearby" : "No damaging earthquake found"}
           </span>
           {top?.magnitude ? (
             <span className="muted">
@@ -615,18 +617,23 @@ function SatelliteReading({ site, onChanged }: { site: Site; onChanged: () => vo
             </span>
           ) : null}
         </p>
+      ) : note ? (
+        <p className="muted">{note}</p>
       ) : (
         <button
           className="btn w-full"
           disabled={busy}
           onClick={async () => {
             setBusy(true);
-            await fetch("/api/seismic", {
+            const res = await fetch("/api/seismic", {
               method: "POST",
               headers: { "content-type": "application/json" },
               body: JSON.stringify({ site_ids: [site.id] }),
             });
+            const [result] = res.ok ? await res.json() : [{ note: "Couldn't reach USGS. Try again." }];
             setBusy(false);
+            if (result?.consulted === false) setNote("Not checked: the burn classifier marked this site burn-positive.");
+            else if (result?.note && !result.consulted) setNote(result.note);
             onChanged();
           }}
         >
@@ -825,7 +832,7 @@ function AddEvidence({
         onChange={(e) => onHandle(e.target.value)}
       />
       <p className="muted text-[12px] leading-snug">
-        Don&apos;t include names or faces of people who could be put at risk.
+        No names or faces of people at risk.
       </p>
       <div className="flex gap-2">
         <button
