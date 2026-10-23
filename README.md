@@ -11,7 +11,6 @@ See [`DESIGN.md`](DESIGN.md) for the full design.
 | Part | State |
 |---|---|
 | Map, time bar, area probe (box or coordinates) | Working |
-| Place search: local GeoNames gazetteer, tolerant of misspellings and Burmese romanisation variants; queries stay on the server | Working after `python -m core.places fetch MM` |
 | Area layers from Earth Engine: radar change (PWTT), burn signal (dNBR), before/after true colour for the selected dates | Working with Earth Engine credentials |
 | Verification levels, evidence (links, testimony), reviewer checks, agreement | Working |
 | Seismic check (USGS FDSN + ShakeMap intensity at the site) | Working on live data |
@@ -46,7 +45,6 @@ python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env
-python -m core.places fetch MM   # place-search gazetteer (GeoNames); add country codes as needed
 
 uvicorn api.main:app --reload --port 8000
 # in another shell
@@ -114,4 +112,4 @@ pytest
 
 ## Acknowledgements
 
-Pixel-Wise T-Test by Ollie Ballinger ([github.com/oballinger/PWTT](https://github.com/oballinger/PWTT), MIT), vendored in `core/_vendor/pwtt` with robustness fixes by Imogen Dexter. Method: Ballinger, O. (2025). Open access battle damage detection via Pixel-Wise T-Test on Sentinel-1 imagery. *Remote Sensing of Environment* 331, 115025. https://doi.org/10.1016/j.rse.2025.115025. Burn signal: dNBR (Key & Benson, USGS FIREMON). Place names from GeoNames (geonames.org, CC BY 4.0). Earthquake data from the USGS. Globe imagery: Sentinel-2 cloudless 2016 by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2016). Labels © OpenStreetMap contributors, © CARTO.
+Pixel-Wise T-Test by Ollie Ballinger ([github.com/oballinger/PWTT](https://github.com/oballinger/PWTT), MIT), vendored in `core/_vendor/pwtt` with robustness fixes by Imogen Dexter. Method: Ballinger, O. (2025). Open access battle damage detection via Pixel-Wise T-Test on Sentinel-1 imagery. *Remote Sensing of Environment* 331, 115025. https://doi.org/10.1016/j.rse.2025.115025. Burn signal: dNBR (Key & Benson, USGS FIREMON). Earthquake data from the USGS. Globe imagery: Sentinel-2 cloudless 2016 by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2016). Labels © OpenStreetMap contributors, © CARTO.

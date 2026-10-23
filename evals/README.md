@@ -16,13 +16,3 @@ The tests currently check the fixtures against the tool list. Scoring real agent
 
 Areas with known answers, listed in `layer3/aois.md`. They are represented by synthetic demo locations until real imagery is exported.
 
-## Place search
-
-`places/golden.json` holds 300 real variant spellings from GeoNames: 150 other romanisations and 150 Burmese-script names, one per place. Each case removes its spelling from the index, searches for it, and checks whether the right place comes back (top 1, top 5), or at least a place with the right name (many villages share one).
-
-```bash
-python evals/places/place_eval.py run           # search alone
-python evals/places/place_eval.py run --scout   # with the spelling scout (Ollama)
-```
-
-Baseline, search alone: romanisations top 5 0.50 (right name 0.59); Burmese script 0.00 (right name 0.37, only via other places with the same name). `places/test_place_search.py` keeps the romanisation figures from slipping.
