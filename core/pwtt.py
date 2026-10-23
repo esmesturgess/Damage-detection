@@ -78,6 +78,7 @@ def run_scan(job_id: str, params: dict[str, Any]) -> dict[str, Any]:
 
     from core._vendor import pwtt
     from core.imagery import L1C, L2A, clear_scenes, pick_product
+    from core.investigations import attach_to_investigations
 
     aoi, baseline, event = params["aoi"], params["baseline_window"], params["event_window"]
     region = ee.Geometry(aoi)
@@ -221,6 +222,7 @@ def run_scan(job_id: str, params: dict[str, Any]) -> dict[str, Any]:
                     utcnow(),
                 ),
             )
+            attach_to_investigations(conn, site_id, point, event)
             audit(conn, "model", "hotspot_detected", "site", site_id, {"job_id": job_id, "mean_t": props.get("mean")})
             created.append(site_id)
 

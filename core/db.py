@@ -26,10 +26,29 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     return conn
 
 
+# Columns added after the first release. CREATE TABLE IF NOT EXISTS leaves
+# existing databases untouched, so these are added in place when missing.
+ADDED_COLUMNS = {
+    "sites": [
+        ("kind", "TEXT NOT NULL DEFAULT 'hotspot'"),  # hotspot | investigation
+        ("parent_id", "TEXT"),  # investigation a hot-spot belongs to
+        ("name_local", "TEXT"),  # place name in the local language
+        ("question", "TEXT"),  # optional prompt that opens an investigation
+        ("created_by", "TEXT"),
+    ],
+}
+
+
 def init_db(conn: sqlite3.Connection | None = None) -> None:
     own = conn is None
     conn = conn or connect()
     conn.executescript(SCHEMA_PATH.read_text())
+    for table, columns in ADDED_COLUMNS.items():
+        existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+        for name, definition in columns:
+            if name not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_sites_parent ON sites(parent_id)")
     conn.commit()
     if own:
         conn.close()

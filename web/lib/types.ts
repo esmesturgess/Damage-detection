@@ -23,9 +23,15 @@ export type Site = {
   timestamps: Record<string, unknown> | null;
   region: string | null;
   is_demo: number;
-  geometry: { type: string; coordinates: number[] };
+  geometry: { type: "Point"; coordinates: number[] } | { type: "Polygon"; coordinates: number[][][] };
   created_at: string;
   verification: Verification;
+  /** hotspot: a machine detection (point); investigation: an area people opened (polygon). */
+  kind: "hotspot" | "investigation";
+  parent_id: string | null;
+  name_local: string | null;
+  question: string | null;
+  created_by: string | null;
 };
 
 export type EvidenceCheck = {
@@ -70,3 +76,12 @@ export const LEVELS: { id: Level; label: string; color: string; note: string }[]
 ];
 
 export const levelInfo = (level: Level) => LEVELS.find((l) => l.id === level) ?? LEVELS[LEVELS.length - 1];
+
+/** Centre of a site: the point itself, or the middle of an investigation's area. */
+export function siteCentre(site: Site): [number, number] {
+  if (site.geometry.type === "Point") return [site.geometry.coordinates[0], site.geometry.coordinates[1]];
+  const ring = site.geometry.coordinates[0];
+  const xs = ring.map((c) => c[0]);
+  const ys = ring.map((c) => c[1]);
+  return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2];
+}

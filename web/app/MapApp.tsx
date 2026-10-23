@@ -11,10 +11,11 @@ import {
   type MapMouseEvent,
   type StyleSpecification,
 } from "maplibre-gl";
-import { LEVELS, type Level, type Reviewer, type Site } from "@/lib/types";
+import { LEVELS, siteCentre, type Level, type Reviewer, type Site } from "@/lib/types";
 import AreaLayers, { AREA_LAYERS, type AreaLayerId, type Analysis } from "./AreaLayers";
 import Intro from "./Intro";
 import SiteOverlay from "./SiteOverlay";
+import StartInvestigation from "./StartInvestigation";
 import TimeBar, { label, monthIndex, windows } from "./TimeBar";
 
 // MapLibre 6 resolves its worker relative to import.meta.url, which breaks once
@@ -71,10 +72,11 @@ async function fetchSites(): Promise<Site[]> {
   return res.json();
 }
 
-function coords(site: Site): [number, number] | null {
-  const c = site.geometry?.coordinates;
-  if (!c || c.length < 2) return null;
-  return [c[0], c[1]];
+/** The area a site covers: an investigation's own polygon, or a box around a hot-spot. */
+function siteArea(site: Site): GeoJSON.Polygon {
+  if (site.geometry.type === "Polygon") return site.geometry;
+  const [lon, lat] = siteCentre(site);
+  return boxAround(lat, lon, SITE_BOX_KM);
 }
 
 function boxAround(lat: number, lon: number, sizeKm: number): GeoJSON.Polygon {
@@ -105,6 +107,7 @@ export default function MapApp() {
   const fitOnLoad = useRef<GeoJSON.Polygon | null>(null);
   const [showDetected, setShowDetected] = useState(true);
   const [introOpen, setIntroOpen] = useState(false);
+  const [startOpen, setStartOpen] = useState(false);
   const [range, setRange] = useState<[number, number]>([monthIndex(2017, 7), monthIndex(2017, 8)]);
   const [coordText, setCoordText] = useState("");
   const [reviewerOpen, setReviewerOpen] = useState(false);
@@ -156,8 +159,7 @@ export default function MapApp() {
         setError(null);
         const linked = s.find((site) => window.location.pathname === `/sites/${site.id}`);
         if (linked) {
-          const [lon, lat] = linked.geometry.coordinates;
-          const box = boxAround(lat, lon, SITE_BOX_KM);
+          const box = siteArea(linked);
           setAoi(box);
           const map = mapRef.current;
           if (map?.loaded()) {
@@ -215,7 +217,33 @@ export default function MapApp() {
             source: "aoi",
             paint: { "line-color": "#ffffff", "line-width": 1.5, "line-dasharray": [2, 1] },
           });
-          // One circle per location, coloured by verification level. Detected is
+          map.addSource("investigations", { type: "geojson", data: emptyFc() });
+          map.addLayer({
+            id: "inv-fill",
+            type: "fill",
+            source: "investigations",
+            paint: { "fill-color": ["get", "color"], "fill-opacity": 0.1 },
+          });
+          map.addLayer({
+            id: "inv-line",
+            type: "line",
+            source: "investigations",
+            paint: { "line-color": ["get", "color"], "line-width": 2.5 },
+          });
+          map.addLayer({
+            id: "inv-label",
+            type: "symbol",
+            source: "investigations",
+            layout: {
+              "text-field": ["get", "name"],
+              "text-font": ["Montserrat SemiBold", "Open Sans Bold", "Noto Sans Regular"],
+              "text-size": 13,
+              "text-anchor": "top",
+              "text-offset": [0, 0.6],
+            },
+            paint: { "text-color": "#f4efe6", "text-halo-color": "#3a140e", "text-halo-width": 1.6 },
+          });
+          // Hot-spots: one circle each, coloured by verification level. Detected is
           // an outline only: a machine signal, not a claim.
           map.addLayer({
             id: "locations",
@@ -244,8 +272,10 @@ export default function MapApp() {
               ],
             },
           });
-          map.on("mouseenter", "locations", () => (map.getCanvas().style.cursor = "pointer"));
-          map.on("mouseleave", "locations", () => (map.getCanvas().style.cursor = ""));
+          for (const layer of ["locations", "inv-fill"]) {
+            map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
+            map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
+          }
           // Earth Engine computes area tiles on demand and occasionally fails one
           // (busy or timed out). Handling errors here keeps a single bad tile from
           // surfacing as a page error; area failures get a retry in the Layers panel.
@@ -278,26 +308,35 @@ export default function MapApp() {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const handler = (ev: MapLayerMouseEvent) => {
+      // Dots sit above investigation areas; take the topmost feature only once.
+      if ((ev.originalEvent as MouseEvent & { handled?: boolean }).handled) return;
+      (ev.originalEvent as MouseEvent & { handled?: boolean }).handled = true;
       const feature = ev.features?.[0];
       const id = feature?.properties?.id as string | undefined;
-      if (!id || feature?.geometry.type !== "Point") return;
+      if (!id || !feature) return;
       window.history.pushState(null, "", `/sites/${id}`);
-      const [lon, lat] = feature.geometry.coordinates;
-      setAoi(boxAround(lat, lon, SITE_BOX_KM));
+      if (feature.geometry.type === "Polygon") setAoi(feature.geometry as GeoJSON.Polygon);
+      else if (feature.geometry.type === "Point") {
+        const [lon, lat] = feature.geometry.coordinates;
+        setAoi(boxAround(lat, lon, SITE_BOX_KM));
+      }
     };
     map.on("click", "locations", handler);
+    map.on("click", "inv-fill", handler);
     return () => {
       map.off("click", "locations", handler);
+      map.off("click", "inv-fill", handler);
     };
   }, [mapReady]);
 
   const fc = useMemo(() => toFeatureCollection(sites), [sites]);
+  const invFc = useMemo(() => investigationsCollection(sites), [sites]);
 
   useEffect(() => {
     const map = mapRef.current;
-    const src = map?.getSource("sites") as GeoJSONSource | undefined;
-    src?.setData(fc);
-  }, [fc, mapReady]);
+    (map?.getSource("sites") as GeoJSONSource | undefined)?.setData(fc);
+    (map?.getSource("investigations") as GeoJSONSource | undefined)?.setData(invFc);
+  }, [fc, invFc, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -547,6 +586,11 @@ export default function MapApp() {
                 </button>
               </div>
             ) : null}
+            {aoi ? (
+              <button className="btn mt-2 w-full" onClick={() => setStartOpen(true)}>
+                Start investigation
+              </button>
+            ) : null}
             {probeMsg ? <p className="muted mt-2">{probeMsg}</p> : null}
             {error ? <p className="mt-2 text-[#ff6b4a]">{error}</p> : null}
           </section>
@@ -669,6 +713,30 @@ export default function MapApp() {
           onHandle={setHandle}
           onClose={() => window.history.pushState(null, "", "/")}
           onChanged={loadSites}
+          parent={sites.find((x) => x.id === selected.parent_id) ?? null}
+          onOpenSite={(id) => window.history.pushState(null, "", `/sites/${id}`)}
+          onStartHere={(site) => {
+            window.history.pushState(null, "", "/");
+            const area = siteArea(site);
+            setAoi(area);
+            const [sw, , ne] = area.coordinates[0];
+            mapRef.current?.fitBounds([sw as [number, number], ne as [number, number]], { padding: 160, maxZoom: 12 });
+            setStartOpen(true);
+          }}
+        />
+      ) : null}
+
+      {startOpen && aoi ? (
+        <StartInvestigation
+          aoi={aoi}
+          win={win}
+          author={reviewer.enabled ? reviewer.name : handle}
+          onClose={() => setStartOpen(false)}
+          onOpen={(id, created) => {
+            setStartOpen(false);
+            if (created) loadSites();
+            window.history.pushState(null, "", `/sites/${id}`);
+          }}
         />
       ) : null}
 
@@ -684,20 +752,31 @@ function emptyFc(): GeoJSON.FeatureCollection {
 function toFeatureCollection(sites: Site[]): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
-    features: sites.flatMap((s) => {
-      const c = coords(s);
-      if (!c) return [];
-      return [
-        {
-          type: "Feature",
-          properties: {
-            id: s.id,
-            level: s.verification.level,
-            color: LEVEL_COLOR[s.verification.level],
-          },
-          geometry: { type: "Point", coordinates: c },
+    features: sites
+      .filter((s) => s.geometry.type === "Point")
+      .map((s) => ({
+        type: "Feature",
+        properties: { id: s.id, level: s.verification.level, color: LEVEL_COLOR[s.verification.level] },
+        geometry: { type: "Point", coordinates: siteCentre(s) },
+      })),
+  };
+}
+
+function investigationsCollection(sites: Site[]): GeoJSON.FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: sites
+      .filter((s) => s.kind === "investigation" && s.geometry.type === "Polygon")
+      .map((s) => ({
+        type: "Feature",
+        properties: {
+          id: s.id,
+          name: s.name_local ? `${s.name}\n${s.name_local}` : (s.name ?? ""),
+          level: s.verification.level,
+          // Unreviewed investigations get a cream outline rather than grey, so they read on imagery.
+          color: s.verification.level === "detected" ? "#f4efe6" : LEVEL_COLOR[s.verification.level],
         },
-      ];
-    }),
+        geometry: s.geometry,
+      })),
   };
 }

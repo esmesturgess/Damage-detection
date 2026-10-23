@@ -43,6 +43,9 @@ def site_history(site_id: str) -> list[dict[str, Any]]:
 
 
 def _summary(action: str, actor: str, payload: dict[str, Any]) -> str | None:
+    if action == "investigation_started":
+        attached = payload.get("hotspots_attached") or 0
+        return f"{actor} started the investigation" + (f" ({attached} hot-spots attached)" if attached else "")
     if action == "hotspot_detected":
         return "Detected by a radar change scan"
     if action == "classify_burn":

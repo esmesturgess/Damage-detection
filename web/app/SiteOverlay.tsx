@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { levelInfo, type Evidence, type EvidenceCheck, type Reviewer, type Site } from "@/lib/types";
+import { levelInfo, siteCentre, type Evidence, type EvidenceCheck, type Reviewer, type Site } from "@/lib/types";
 
 const LADDER = ["detected", "corroborated", "verified"] as const;
 
@@ -42,6 +42,9 @@ export default function SiteOverlay({
   onHandle,
   onClose,
   onChanged,
+  parent,
+  onOpenSite,
+  onStartHere,
 }: {
   site: Site;
   handle: string;
@@ -49,7 +52,13 @@ export default function SiteOverlay({
   onHandle: (h: string) => void;
   onClose: () => void;
   onChanged: () => void;
+  /** The investigation a hot-spot belongs to, if any. */
+  parent: Site | null;
+  onOpenSite: (id: string) => void;
+  onStartHere: (site: Site) => void;
 }) {
+  const isInvestigation = site.kind === "investigation";
+  const hotspots = useHotspots(isInvestigation ? site.id : null);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [msg, setMsg] = useState("");
   const [version, setVersion] = useState(0);
@@ -87,13 +96,21 @@ export default function SiteOverlay({
     }
   }
 
-  const [lon, lat] = site.geometry.coordinates;
+  const [lon, lat] = siteCentre(site);
   const window_ = (site.timestamps as { event_window?: string[] } | null)?.event_window;
   const f = site.features ?? {};
+  const strongest = hotspots.length ? Math.max(...hotspots.map((h) => h.pwtt_z ?? 0)) : null;
   const facts: { label: string; value: string }[] = [
     { label: "Window", value: window_ ? dateRange(window_[0], window_[1]) : "—" },
-    { label: "Radar change", value: site.pwtt_z != null ? site.pwtt_z.toFixed(1) : "—" },
-    { label: "Burn, strongest 5%", value: f.p95_dnbr != null ? Number(f.p95_dnbr).toFixed(2) : "—" },
+    ...(isInvestigation
+      ? [
+          { label: "Hot-spots", value: String(hotspots.length) },
+          { label: "Strongest change", value: strongest != null ? strongest.toFixed(1) : "—" },
+        ]
+      : [
+          { label: "Radar change", value: site.pwtt_z != null ? site.pwtt_z.toFixed(1) : "—" },
+          { label: "Burn, strongest 5%", value: f.p95_dnbr != null ? Number(f.p95_dnbr).toFixed(2) : "—" },
+        ]),
     { label: "Evidence", value: String(v.evidence_count) },
     { label: "Independent sources", value: String(v.independent_sources) },
   ];
@@ -118,7 +135,7 @@ export default function SiteOverlay({
         {/* Case-file cover */}
         <header className="border-b border-[var(--line)] px-8 pb-6 pt-7 lg:px-10">
           <div className="eyebrow mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="text-[var(--foreground)]">Case file</span>
+            <span className="text-[var(--foreground)]">{isInvestigation ? "Investigation" : "Hot-spot"}</span>
             <span>{site.region ?? "unassigned region"}</span>
             <span className="num">
               {lat.toFixed(4)}°N {lon.toFixed(4)}°E
@@ -136,14 +153,21 @@ export default function SiteOverlay({
             </button>
           </div>
           <div className="flex flex-wrap items-end justify-between gap-4 pr-14">
-            <h1 className="max-w-3xl text-[30px] font-semibold leading-[1.1] tracking-tight lg:text-[36px]">
-              {site.name ?? site.id}
-            </h1>
+            <div className="max-w-3xl">
+              <h1 className="text-[30px] font-semibold leading-[1.1] tracking-tight lg:text-[36px]">{site.name ?? site.id}</h1>
+              {site.name_local ? <p className="mt-1 text-[22px] opacity-80">{site.name_local}</p> : null}
+            </div>
             <span className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-black/20 px-3.5 py-1.5 text-[14px]">
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: info.color }} />
               {info.label}
             </span>
           </div>
+          {site.question ? (
+            <blockquote className="mt-5 max-w-3xl border-l-4 border-[#f4efe6]/60 pl-4 text-[16px] leading-snug">
+              {site.question}
+              {site.created_by ? <span className="muted block text-[12px]">asked by {site.created_by}</span> : null}
+            </blockquote>
+          ) : null}
           <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
             {facts.map((fact) => (
               <div key={fact.label} className="border-l-2 border-[var(--line)] pl-3">
@@ -158,6 +182,8 @@ export default function SiteOverlay({
           {/* Left: what the satellite saw, then what people have found */}
           <div className="min-w-0 space-y-10">
             <SiteImagery siteId={site.id} />
+
+            {isInvestigation ? <HotspotList hotspots={hotspots} onOpen={onOpenSite} /> : null}
 
             <section>
               <div className="mb-3 flex items-center justify-between">
@@ -210,6 +236,29 @@ export default function SiteOverlay({
 
           {/* Right rail: the verdict so far, readings and actions */}
           <aside className="space-y-8 lg:sticky lg:top-6 lg:self-start">
+            {isInvestigation ? null : parent ? (
+              <section className="rounded-xl border border-[var(--line)] p-5">
+                <div className="eyebrow mb-1.5">Part of investigation</div>
+                <p className="mb-3 text-[15px] font-semibold">
+                  {parent.name}
+                  {parent.name_local ? <span className="muted font-normal"> · {parent.name_local}</span> : null}
+                </p>
+                <button className="btn w-full" onClick={() => onOpenSite(parent.id)}>
+                  Open the investigation
+                </button>
+              </section>
+            ) : (
+              <section className="rounded-xl border border-[var(--line)] p-5">
+                <div className="eyebrow mb-1.5">Not part of an investigation</div>
+                <p className="muted mb-3 leading-snug">
+                  Start one for this area to gather evidence and discuss it with colleagues.
+                </p>
+                <button className="btn btn-primary w-full" onClick={() => onStartHere(site)}>
+                  Start investigation here
+                </button>
+              </section>
+            )}
+
             <section className="rounded-xl bg-black/20 p-5">
               <div className="eyebrow mb-3">Verification</div>
               <div className="mb-4 flex gap-1.5">
@@ -235,7 +284,7 @@ export default function SiteOverlay({
               <p className="muted mt-1 leading-snug">{v.why}</p>
             </section>
 
-            <SatelliteReading site={site} onChanged={onChanged} />
+            {isInvestigation ? null : <SatelliteReading site={site} onChanged={onChanged} />}
 
             <section>
               <div className="eyebrow mb-2">Do you agree?</div>
@@ -419,6 +468,59 @@ function SiteImagery({ siteId }: { siteId: string }) {
           {n}
         </p>
       ))}
+    </section>
+  );
+}
+
+function useHotspots(investigationId: string | null): Site[] {
+  const [state, setState] = useState<{ id: string; items: Site[] } | null>(null);
+  useEffect(() => {
+    if (!investigationId) return;
+    let cancelled = false;
+    fetch(`/api/sites/${investigationId}/hotspots`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((items) => !cancelled && setState({ id: investigationId, items }))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [investigationId]);
+  return state && state.id === investigationId ? state.items : [];
+}
+
+function HotspotList({ hotspots, onOpen }: { hotspots: Site[]; onOpen: (id: string) => void }) {
+  return (
+    <section>
+      <h2 className="mb-1 text-[18px] font-semibold">Hot-spots in this area</h2>
+      <p className="muted mb-3 text-[12px]">
+        Radar change clusters found by scans, strongest first. Scan the area again to add more.
+      </p>
+      {hotspots.length === 0 ? (
+        <p className="muted rounded-xl border border-dashed border-[var(--line)] px-4 py-5 text-center">
+          No hot-spots yet. Close this page and press “Scan for change”.
+        </p>
+      ) : (
+        <ol className="divide-y divide-[var(--line)] overflow-hidden rounded-xl border border-[var(--line)]">
+          {hotspots.slice(0, 12).map((h, i) => {
+            const feat = h.features ?? {};
+            return (
+              <li key={h.id}>
+                <button className="flex w-full items-center gap-4 px-4 py-2.5 text-left hover:bg-white/5" onClick={() => onOpen(h.id)}>
+                  <span className="faint num w-5 text-[12px]">{i + 1}</span>
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: levelInfo(h.verification.level).color }} />
+                  <span className="num flex-1">change {h.pwtt_z?.toFixed(1) ?? "—"}</span>
+                  <span className="muted num text-[12px]">
+                    {feat.hotspot_area_ha != null ? `${Number(feat.hotspot_area_ha).toFixed(1)} ha` : ""}
+                    {feat.p95_dnbr != null ? ` · burn ${Number(feat.p95_dnbr).toFixed(2)}` : ""}
+                  </span>
+                  <span className="muted">→</span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      {hotspots.length > 12 ? <p className="faint mt-2 text-[12px]">and {hotspots.length - 12} more on the map</p> : null}
     </section>
   );
 }

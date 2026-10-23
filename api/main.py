@@ -13,6 +13,13 @@ from core.config import settings
 from core.coverage import check_coverage
 from core.gee import GeeUnavailable
 from core.history import site_history
+from core.investigations import (
+    InvestigationError,
+    find_overlaps,
+    hotspots_of,
+    place_name,
+    start_investigation,
+)
 from core.imagery import analysis_layers, area_thumbnails
 from core.db import init_db, row_to_dict, session
 from core.evidence import (
@@ -199,7 +206,6 @@ def site_imagery(site_id: str) -> dict[str, Any]:
     from core.geo import box_around
 
     site = get_site(site_id)
-    lon, lat = site["geometry"]["coordinates"][:2]
     window = (site.get("timestamps") or {}).get("event_window")
     if not window:
         raise HTTPException(status_code=404, detail="This site has no event window to show imagery for.")
@@ -208,8 +214,11 @@ def site_imagery(site_id: str) -> dict[str, Any]:
         start = date.fromisoformat(window[0])
         baseline = [(start - timedelta(days=365)).isoformat(), (start - timedelta(days=1)).isoformat()]
     try:
+        geometry = site["geometry"]
+        if geometry["type"] == "Point":  # hot-spots: a box around the point
+            geometry = box_around(*geometry["coordinates"][:2], SITE_BOX_KM)
         return area_thumbnails(
-            box_around(lon, lat, SITE_BOX_KM),
+            geometry,
             {"start": baseline[0], "end": baseline[1]},
             {"start": window[0], "end": window[1]},
         )
@@ -217,6 +226,58 @@ def site_imagery(site_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:  # Earth Engine computation errors
         raise HTTPException(status_code=502, detail=f"Earth Engine error: {exc}") from exc
+
+
+@app.get("/sites/{site_id}/hotspots")
+def get_hotspots(site_id: str) -> list[dict[str, Any]]:
+    get_site(site_id)
+    hotspots = hotspots_of(site_id)
+    with session() as conn:
+        for hotspot in hotspots:
+            hotspot["verification"] = verification(conn, hotspot["id"])
+    return hotspots
+
+
+class OverlapIn(BaseModel):
+    aoi_geojson: dict[str, Any]
+    event_window: dict[str, str]
+
+
+class InvestigationIn(BaseModel):
+    aoi_geojson: dict[str, Any]
+    baseline_window: dict[str, str]
+    event_window: dict[str, str]
+    name: str
+    name_local: str | None = None
+    question: str | None = None
+    created_by: str | None = None
+
+
+@app.get("/places/name")
+def get_place_name(lat: float, lon: float, area_km2: float | None = None) -> dict[str, Any]:
+    """English and local name of the place at a point (OpenStreetMap)."""
+    return place_name(lat, lon, area_km2)
+
+
+@app.post("/investigations/overlaps")
+def post_overlaps(body: OverlapIn) -> list[dict[str, Any]]:
+    return find_overlaps(body.aoi_geojson, body.event_window)
+
+
+@app.post("/investigations")
+def post_investigation(body: InvestigationIn) -> dict[str, Any]:
+    try:
+        return start_investigation(
+            body.aoi_geojson,
+            body.baseline_window,
+            body.event_window,
+            body.name,
+            body.name_local,
+            body.question,
+            body.created_by,
+        )
+    except (InvestigationError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/sites/{site_id}/history")
