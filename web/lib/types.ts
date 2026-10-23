@@ -1,8 +1,9 @@
-export type Level = "detected" | "corroborated" | "verified" | "explained" | "disputed";
+export type Level = "detected" | "corroborated" | "verified" | "disputed" | "ruled_out";
 
 export type Verification = {
   level: Level;
   why: string;
+  ruled_out_reason: "explained" | "false_detection" | null;
   evidence_count: number;
   independent_sources: number;
   agreement: { agree: number; disagree: number; unsure: number };
@@ -110,16 +111,25 @@ export type Job = {
   error?: string | null;
 };
 
-export const LEVELS: { id: Level; label: string; color: string; note: string }[] = [
-  // Cream with a brick ring on the map: reads as "confirmed", not as burn red.
-  { id: "verified", label: "Verified", color: "#f4efe6", note: "2+ independent sources, signed off by a second investigator" },
-  { id: "corroborated", label: "Corroborated", color: "#f5a623", note: "evidence located and dated by an investigator" },
-  { id: "disputed", label: "Disputed", color: "#f5a623", note: "credible evidence on both sides" },
-  { id: "explained", label: "Explained", color: "#6ec8ff", note: "non-hostile cause: crops, earthquake…" },
-  { id: "detected", label: "Detected", color: "#8a8d84", note: "satellite signal only, unreviewed" },
+const PAPER = "#f4efe6";
+const BRICK = "#a8442f";
+
+/**
+ * How each level is drawn. Marks fill up as a site climbs the ladder: an empty
+ * ring for a machine signal, half-strength brick once a colleague has
+ * corroborated it, solid brick once verified. Disputed is a cream dot. `line` outlines investigation areas on imagery.
+ */
+export type LevelStyle = { id: Level; label: string; note: string; fill: string; stroke: string; strokeWidth: number; radius: number; line: string };
+
+export const LEVELS: LevelStyle[] = [
+  { id: "verified", label: "Verified", note: "2+ independent sources, signed off by a colleague who checked none of them", fill: BRICK, stroke: PAPER, strokeWidth: 2.5, radius: 8, line: "#c4563c" },
+  { id: "corroborated", label: "Corroborated", note: "evidence located and dated by a colleague", fill: "rgba(168,68,47,0.5)", stroke: PAPER, strokeWidth: 1.5, radius: 7, line: PAPER },
+  { id: "disputed", label: "Disputed", note: "credible evidence on both sides", fill: PAPER, stroke: BRICK, strokeWidth: 2.5, radius: 7, line: "#c4563c" },
+  { id: "detected", label: "Detected", note: "satellite signal only, not yet looked at", fill: "rgba(0,0,0,0)", stroke: PAPER, strokeWidth: 1.5, radius: 5, line: "#d8d2b8" },
+  { id: "ruled_out", label: "Ruled out", note: "a non-hostile cause, or a false detection", fill: "rgba(0,0,0,0)", stroke: "#8a8d84", strokeWidth: 1, radius: 4, line: "#8a8d84" },
 ];
 
-export const levelInfo = (level: Level) => LEVELS.find((l) => l.id === level) ?? LEVELS[LEVELS.length - 1];
+export const levelInfo = (level: Level) => LEVELS.find((l) => l.id === level) ?? LEVELS.find((l) => l.id === "detected")!;
 
 /** Centre of a site: the point itself, or the middle of an investigation's area. */
 export function siteCentre(site: Site): [number, number] {

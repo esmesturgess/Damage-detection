@@ -76,11 +76,16 @@ def test_confirm_without_evidence_does_nothing(site_id):
     assert verification_for(site_id)["level"] == "detected"
 
 
-def test_explained_and_disputed_come_from_reviewers(site_id):
+def test_explained_and_false_detection_both_rule_out(site_id):
     set_verdict(site_id, "explained", "rev-2", "crop burning")
-    assert verification_for(site_id)["level"] == "explained"
-    set_verdict(site_id, "disputed", "rev-3")
-    assert verification_for(site_id)["level"] == "disputed"
+    v = verification_for(site_id)
+    assert (v["level"], v["ruled_out_reason"]) == ("ruled_out", "explained")
+    set_verdict(site_id, "reject", "rev-3")
+    v = verification_for(site_id)
+    assert (v["level"], v["ruled_out_reason"]) == ("ruled_out", "false_detection")
+    set_verdict(site_id, "disputed", "rev-4")
+    v = verification_for(site_id)
+    assert (v["level"], v["ruled_out_reason"]) == ("disputed", None)
 
 
 def test_reviewer_cannot_check_own_submission(site_id):

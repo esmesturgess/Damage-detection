@@ -10,9 +10,10 @@ import {
   setWorkerUrl,
   type MapLayerMouseEvent,
   type MapMouseEvent,
+  type FilterSpecification,
   type StyleSpecification,
 } from "maplibre-gl";
-import { LEVELS, siteCentre, type Level, type Site } from "@/lib/types";
+import { LEVELS, levelInfo, siteCentre, type Site } from "@/lib/types";
 import AreaLayers, { AREA_LAYERS, type AreaLayerId, type Analysis } from "./AreaLayers";
 import Intro from "./Intro";
 import SiteOverlay from "./SiteOverlay";
@@ -25,8 +26,6 @@ setWorkerUrl("/maplibre-gl-worker.mjs");
 
 const RAKHINE: [number, number] = [93.8, 20.8];
 const API_DOWN = "API unreachable. Start uvicorn on :8000.";
-const LEVEL_COLOR = Object.fromEntries(LEVELS.map((l) => [l.id, l.color])) as Record<Level, string>;
-const BRICK = "#a8442f";
 const AREA_OPACITY = 0.85;
 const INTRO_SEEN = "burn-evidence:intro-seen";
 const HANDLE = "burn-evidence:handle";
@@ -108,6 +107,7 @@ export default function MapApp() {
   const selectedId = pathname?.match(/^\/sites\/([^/]+)/)?.[1] ?? null;
   const fitOnLoad = useRef<GeoJSON.Polygon | null>(null);
   const [showDetected, setShowDetected] = useState(true);
+  const [showRuledOut, setShowRuledOut] = useState(false);
   const [introOpen, setIntroOpen] = useState(false);
   const [startOpen, setStartOpen] = useState(false);
   const [range, setRange] = useState<[number, number]>([monthIndex(2017, 7), monthIndex(2017, 8)]);
@@ -258,33 +258,17 @@ export default function MapApp() {
             },
             paint: { "text-color": "#f4efe6", "text-halo-color": "#3a140e", "text-halo-width": 1.6 },
           });
-          // Hot-spots: one circle each, coloured by verification level. Detected is
-          // an outline only: a machine signal, not a claim.
+          // Hot-spots: one circle each, drawn by verification level (see LEVELS).
+          // Detected is an outline only: a machine signal, not a claim.
           map.addLayer({
             id: "locations",
             type: "circle",
             source: "sites",
             paint: {
-              "circle-radius": ["match", ["get", "level"], "verified", 8, "detected", 5, 7],
-              "circle-color": [
-                "match",
-                ["get", "level"],
-                "detected",
-                "rgba(0,0,0,0)",
-                ["get", "color"],
-              ],
-              "circle-stroke-width": ["match", ["get", "level"], "detected", 1.5, "disputed", 2.5, "verified", 3, 1],
-              "circle-stroke-color": [
-                "match",
-                ["get", "level"],
-                "detected",
-                LEVEL_COLOR.detected,
-                "disputed",
-                LEVEL_COLOR.explained,
-                "verified",
-                BRICK,
-                "#050506",
-              ],
+              "circle-radius": ["get", "radius"],
+              "circle-color": ["get", "fill"],
+              "circle-stroke-width": ["get", "strokeWidth"],
+              "circle-stroke-color": ["get", "stroke"],
             },
           });
           for (const layer of ["locations", "inv-fill"]) {
@@ -356,8 +340,11 @@ export default function MapApp() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map?.getLayer("locations")) return;
-    map.setFilter("locations", showDetected ? null : ["!=", ["get", "level"], "detected"]);
-  }, [showDetected, mapReady]);
+    const hidden = [...(showDetected ? [] : ["detected"]), ...(showRuledOut ? [] : ["ruled_out"])];
+    const filter = hidden.length ? (["!", ["in", ["get", "level"], ["literal", hidden]]] as FilterSpecification) : null;
+    map.setFilter("locations", filter);
+    for (const layer of ["inv-fill", "inv-line", "inv-label"]) map.setFilter(layer, showRuledOut ? null : ["!=", ["get", "level"], "ruled_out"]);
+  }, [showDetected, showRuledOut, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -671,26 +658,14 @@ export default function MapApp() {
           <section>
             <div className="eyebrow mb-2">Verification</div>
             <ul className="space-y-1">
-              {LEVELS.map((l) => (
+              {LEVELS.filter((l) => l.id !== "ruled_out" && (l.id !== "disputed" || counts.disputed)).map((l) => (
                 <li
                   key={l.id}
                   className={`flex items-center gap-2.5 ${l.id === "detected" && !showDetected ? "faint" : ""}`}
                   title={l.note}
                 >
-                  <span
-                    className="inline-block h-3 w-3 shrink-0 rounded-full shadow-[0_0_0_1px_#5e2416]"
-                    style={
-                      l.id === "detected"
-                        ? { border: `1.5px solid ${l.color}` }
-                        : l.id === "disputed"
-                          ? { background: l.color, border: `2px solid ${LEVEL_COLOR.explained}` }
-                          : l.id === "verified"
-                            ? { background: l.color, border: `2.5px solid ${BRICK}` }
-                            : { background: l.color }
-                    }
-                  />
-                  <span className="flex-1">{l.label}</span>
-                  <span className="num muted">{counts[l.id] ?? 0}</span>
+                  <LevelMark level={l} />
+                  <span>{l.label}</span>
                 </li>
               ))}
             </ul>
@@ -703,6 +678,17 @@ export default function MapApp() {
               />
               <span>Show unreviewed detections</span>
             </label>
+            {counts.ruled_out ? (
+              <label className="mt-2 flex cursor-pointer items-center gap-2.5" title={levelInfo("ruled_out").note}>
+                <input
+                  type="checkbox"
+                  className="switch"
+                  checked={showRuledOut}
+                  onChange={(e) => setShowRuledOut(e.target.checked)}
+                />
+                <span>Show ruled out</span>
+              </label>
+            ) : null}
           </section>
         </div>
 
@@ -747,8 +733,24 @@ export default function MapApp() {
   );
 }
 
+/** A legend swatch drawn like the map mark. Paper outlines turn ink so they show on the sidebar. */
+function LevelMark({ level }: { level: (typeof LEVELS)[number] }) {
+  const stroke = level.stroke === "#f4efe6" ? "#5e2416" : level.stroke;
+  return (
+    <span
+      className="inline-block h-3.5 w-3.5 shrink-0 rounded-full"
+      style={{ background: level.fill, border: `${Math.min(level.strokeWidth, 2)}px solid ${stroke}` }}
+    />
+  );
+}
+
 function emptyFc(): GeoJSON.FeatureCollection {
   return { type: "FeatureCollection", features: [] };
+}
+
+function markStyle(s: Site) {
+  const { id, fill, stroke, strokeWidth, radius } = levelInfo(s.verification.level);
+  return { level: id, fill, stroke, strokeWidth, radius };
 }
 
 function toFeatureCollection(sites: Site[]): GeoJSON.FeatureCollection {
@@ -758,7 +760,7 @@ function toFeatureCollection(sites: Site[]): GeoJSON.FeatureCollection {
       .filter((s) => s.geometry.type === "Point")
       .map((s) => ({
         type: "Feature",
-        properties: { id: s.id, level: s.verification.level, color: LEVEL_COLOR[s.verification.level] },
+        properties: { id: s.id, ...markStyle(s) },
         geometry: { type: "Point", coordinates: siteCentre(s) },
       })),
   };
@@ -775,8 +777,7 @@ function investigationsCollection(sites: Site[]): GeoJSON.FeatureCollection {
           id: s.id,
           name: s.name_local ? `${s.name}\n${s.name_local}` : (s.name ?? ""),
           level: s.verification.level,
-          // Unreviewed investigations get a cream outline rather than grey, so they read on imagery.
-          color: s.verification.level === "detected" ? "#f4efe6" : LEVEL_COLOR[s.verification.level],
+          color: levelInfo(s.verification.level).line,
         },
         geometry: s.geometry,
       })),

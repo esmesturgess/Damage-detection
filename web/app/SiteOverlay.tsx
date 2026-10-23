@@ -117,8 +117,12 @@ export default function SiteOverlay({
   const stampNote =
     v.level === "verified"
       ? "signed off"
-      : v.level === "explained" || v.level === "disputed"
-        ? "by a colleague's verdict"
+      : v.level === "ruled_out"
+        ? v.ruled_out_reason === "explained"
+          ? "non-hostile cause"
+          : "false detection"
+        : v.level === "disputed"
+          ? "evidence on both sides"
         : `${v.independent_sources} of 2 independent sources`;
   const needHandle = () => setMsg("Pick a handle first (any name). You can set it in the discussion box.");
 
@@ -293,7 +297,7 @@ export default function SiteOverlay({
               <div className="mb-2 flex gap-1.5">
                 {LADDER.map((step) => {
                   const reached =
-                    v.level !== "explained" &&
+                    v.level !== "ruled_out" &&
                     v.level !== "disputed" &&
                     LADDER.indexOf(step) <= LADDER.indexOf(v.level as (typeof LADDER)[number]);
                   return (
@@ -315,9 +319,9 @@ export default function SiteOverlay({
                   {(
                     [
                       ["confirm", "Sign off as verified"],
-                      ["explained", "Explained"],
                       ["disputed", "Disputed"],
-                      ["reject", "False detection"],
+                      ["explained", "Rule out: non-hostile cause"],
+                      ["reject", "Rule out: false detection"],
                     ] as const
                   ).map(([verdict, text]) => (
                     <button

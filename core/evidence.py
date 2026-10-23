@@ -1,14 +1,15 @@
 """Evidence, checklists, agreement, and the verification ladder.
 
-The level is computed from evidence checks and reviewer verdicts every time
-it is read. Nothing stores it, so nothing can set it directly:
+The level is computed from evidence checks and investigators' verdicts every
+time it is read. Nothing stores it, so nothing can set it directly:
 
   detected      satellite signal only
-  corroborated  >=1 item a reviewer has located AND dated
+  corroborated  >=1 item a colleague has located AND dated
   verified      >=2 independent corroborating sources, plus a `confirm`
-                verdict from a reviewer who checked none of them
-  explained     reviewer verdict: non-hostile cause (crop burn, earthquake...)
-  disputed      reviewer verdict: credible evidence on both sides
+                verdict from a colleague who checked none of them
+  disputed      verdict: credible evidence on both sides
+  ruled_out     verdict: non-hostile cause (crop burn, earthquake...) or a
+                false detection. Closed; the reason says which.
 
 Agreement counts are returned for display and queue sorting. They never
 enter the level calculation.
@@ -202,22 +203,28 @@ def verification(conn: sqlite3.Connection, site_id: str) -> dict[str, Any]:
     ).fetchone()
     last = verdict["verdict"] if verdict else None
 
-    if last == "explained":
-        level, why = "explained", "A reviewer found a non-hostile cause."
+    ruled_out_reason = None
+    if last in ("explained", "reject"):
+        level, ruled_out_reason = "ruled_out", ("explained" if last == "explained" else "false_detection")
+        why = (
+            f"Ruled out by {verdict['analyst']}: a non-hostile cause."
+            if last == "explained"
+            else f"Ruled out by {verdict['analyst']}: a false detection."
+        )
     elif last == "disputed":
-        level, why = "disputed", "A reviewer found credible evidence on both sides."
+        level, why = "disputed", f"{verdict['analyst']} found credible evidence on both sides."
     elif len(sources) >= 2 and last == "confirm" and verdict["analyst"] not in checkers:
-        level, why = "verified", f"{len(sources)} independent sources, signed off by a second reviewer."
+        level, why = "verified", f"{len(sources)} independent sources, signed off by a colleague who checked none of them."
     elif sources:
         level = "corroborated"
         if len(sources) >= 2:
-            why = f"{len(sources)} independent sources; awaiting sign-off from a reviewer who checked none of them."
+            why = f"{len(sources)} independent sources; awaiting sign-off from a colleague who checked none of them."
         else:
             why = "1 source located and dated; Verified needs a second independent source."
     else:
         level = "detected"
         why = (
-            "Satellite signal only. Evidence needs to be located and dated by a reviewer."
+            "Satellite signal only. Evidence needs to be located and dated by a colleague."
             if evidence_count
             else "Satellite signal only. No evidence submitted yet."
         )
@@ -225,6 +232,7 @@ def verification(conn: sqlite3.Connection, site_id: str) -> dict[str, Any]:
     return {
         "level": level,
         "why": why,
+        "ruled_out_reason": ruled_out_reason,
         "evidence_count": evidence_count,
         "independent_sources": len(sources),
         "agreement": {s: stances.get(s, 0) for s in sorted(STANCES)},

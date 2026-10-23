@@ -13,9 +13,9 @@ from core.db import session
 FLAG_TEXT = {"possible_seismic": "possible earthquake cause", "unexplained_change": "no damaging earthquake"}
 VERDICT_TEXT = {
     "confirm": "signed off as verified",
-    "reject": "marked as a false detection",
+    "reject": "ruled it out as a false detection",
     "unsure": "marked as unsure",
-    "explained": "marked as explained",
+    "explained": "ruled it out: non-hostile cause",
     "disputed": "marked as disputed",
 }
 
