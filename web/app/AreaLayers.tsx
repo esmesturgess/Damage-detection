@@ -120,7 +120,7 @@ export default function AreaLayers({
         </p>
       </LayerRow>
       <LayerRow
-        title="Water"
+        title="Water mask"
         on={on.water}
         disabled={!layers.water}
         onToggle={(v) => onToggle("water", v)}
