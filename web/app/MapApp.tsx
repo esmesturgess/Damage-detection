@@ -18,9 +18,10 @@ import {
 } from "maplibre-gl";
 import { LEVELS, levelInfo, siteCentre, type Site } from "@/lib/types";
 import AreaLayers, { AREA_LAYERS, type AreaLayerId, type Analysis } from "./AreaLayers";
-import Intro from "./Intro";
 import SiteOverlay from "./SiteOverlay";
 import StartInvestigation from "./StartInvestigation";
+import Tour from "./Tour";
+import { mapTour, siteTour } from "./tours";
 import TimeBar, { label, monthIndex, windows } from "./TimeBar";
 
 // MapLibre 6 resolves its worker relative to import.meta.url, which breaks once
@@ -30,7 +31,7 @@ setWorkerUrl("/maplibre-gl-worker.mjs");
 const RAKHINE: [number, number] = [93.8, 20.8];
 const API_DOWN = "API unreachable. Start uvicorn on :8000.";
 const AREA_OPACITY = 0.85;
-const INTRO_SEEN = "burn-evidence:intro-seen";
+const TOUR_SEEN = { map: "burn-evidence:intro-seen", site: "corroborator:site-tour-seen" } as const;
 const HANDLE = "burn-evidence:handle";
 const EXAMPLE = { lat: 20.82, lon: 92.38, range: [monthIndex(2017, 7), monthIndex(2017, 8)] as [number, number] };
 const SITE_BOX_KM = 3;
@@ -111,7 +112,7 @@ export default function MapApp() {
   const fitOnLoad = useRef<GeoJSON.Polygon | null>(null);
   const [showDetected, setShowDetected] = useState(true);
   const [showRuledOut, setShowRuledOut] = useState(false);
-  const [introOpen, setIntroOpen] = useState(false);
+  const [tour, setTour] = useState<"map" | "site" | null>(null);
   const [startOpen, setStartOpen] = useState(false);
   const [range, setRange] = useState<[number, number]>([monthIndex(2017, 7), monthIndex(2017, 8)]);
   const [coordText, setCoordText] = useState("");
@@ -149,11 +150,11 @@ export default function MapApp() {
   useEffect(() => {
     let seen = true;
     try {
-      seen = localStorage.getItem(INTRO_SEEN) === "1";
+      seen = localStorage.getItem(TOUR_SEEN.map) === "1";
     } catch {
       /* storage unavailable: don't nag */
     }
-    if (!seen) queueMicrotask(() => setIntroOpen(true));
+    if (!seen) queueMicrotask(() => setTour("map"));
     try {
       const saved = localStorage.getItem(HANDLE);
       if (saved) queueMicrotask(() => setHandle(saved));
@@ -391,6 +392,7 @@ export default function MapApp() {
     if (!startMarker.current) {
       const button = document.createElement("button");
       button.className = `${CHROME} map-cta`;
+      button.dataset.tour = "scan";
       button.addEventListener("click", () => markerAction.current());
       startMarker.current = new Marker({ element: button, anchor: "top", offset: [0, 10] });
     }
@@ -522,17 +524,31 @@ export default function MapApp() {
     };
   }, [drawing]);
 
-  function closeIntro() {
-    setIntroOpen(false);
-    try {
-      localStorage.setItem(INTRO_SEEN, "1");
-    } catch {
-      /* storage unavailable */
+  function closeTour() {
+    if (tour) {
+      try {
+        localStorage.setItem(TOUR_SEEN[tour], "1");
+      } catch {
+        /* storage unavailable */
+      }
     }
+    setTour(null);
   }
 
+  // The site page's own tour runs the first time someone opens a site.
+  useEffect(() => {
+    if (!selectedId || tour) return;
+    let seen = true;
+    try {
+      seen = localStorage.getItem(TOUR_SEEN.site) === "1";
+    } catch {
+      /* storage unavailable: don't nag */
+    }
+    if (!seen) queueMicrotask(() => setTour("site"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+
   function showExample() {
-    closeIntro();
     setRange(EXAMPLE.range);
     setCoordText(`${EXAMPLE.lat}, ${EXAMPLE.lon}`);
     goTo(EXAMPLE.lat, EXAMPLE.lon);
@@ -635,18 +651,22 @@ export default function MapApp() {
       {/* Name block, top left. 36px fills the 214px inside the padding (Newsreader 600). */}
       <div className={`${CHROME} on-paper absolute left-4 top-4 flex h-[86px] w-[248px] items-center border border-[var(--rule)] px-4`}>
         <h1 className="display whitespace-nowrap text-[36px] font-semibold leading-none">Corroborator</h1>
-        <button className="link absolute right-2 top-1.5 text-[11px]" onClick={() => setIntroOpen(true)}>
+        <button
+          className="link absolute right-2 top-1.5 text-[11px]"
+          onClick={() => setTour(selected ? "site" : "map")}
+          data-tour="help"
+        >
           Help
         </button>
       </div>
 
-      <div className="pointer-events-none absolute left-[276px] right-4 top-4">
+      <div className="pointer-events-none absolute left-[276px] right-4 top-4" data-tour="timebar">
         <TimeBar start={range[0]} end={range[1]} onChange={(s, e) => setRange([s, e])} />
       </div>
 
       {/* Controls, bottom right: area, layers, key. */}
       <section className={`${CHROME} on-paper absolute bottom-4 right-4 flex max-h-[calc(100%-140px)] w-[300px] flex-col overflow-auto border border-[var(--rule)]`}>
-        <div className="border-b border-[var(--line)] p-3">
+        <div className="border-b border-[var(--line)] p-3" data-tour="area">
           <form
             className="flex border border-[var(--rule)]"
             onSubmit={(e) => {
@@ -674,7 +694,7 @@ export default function MapApp() {
           {drawing ? <p className="muted mt-2 text-[12px]">Drag to draw. Esc cancels.</p> : null}
           {aoi && !drawing ? (
             <div className="mt-2 flex justify-between text-[12px]">
-              <button className="link" onClick={runScan} disabled={scanStatus === "scanning"}>
+              <button className="link" onClick={runScan} disabled={scanStatus === "scanning"} data-tour="scan-link">
                 {scanStatus === "scanning" ? "Scanning…" : scanStatus === "done" ? "Scan again" : "Scan for change"}
               </button>
               <button className="link" onClick={clearArea}>
@@ -687,7 +707,7 @@ export default function MapApp() {
         </div>
 
         {aoi ? (
-          <div className="border-b border-[var(--line)] p-3">
+          <div className="border-b border-[var(--line)] p-3" data-tour="layers">
             <AreaLayers
               analysis={analysis}
               on={layerOn}
@@ -705,7 +725,7 @@ export default function MapApp() {
           </div>
         ) : null}
 
-        <div className="p-3 text-[13px]">
+        <div className="p-3 text-[13px]" data-tour="legend">
           <ul className="mb-2 flex flex-wrap gap-x-3.5 gap-y-1">
             {LEVELS.filter((l) => l.id !== "ruled_out" && (l.id !== "disputed" || counts.disputed)).map((l) => (
               <li
@@ -757,6 +777,7 @@ export default function MapApp() {
           onChanged={loadSites}
           parent={sites.find((x) => x.id === selected.parent_id) ?? null}
           onOpenSite={(id) => window.history.pushState(null, "", `/sites/${id}`)}
+          onTour={() => setTour("site")}
           onStartHere={(site) => {
             window.history.pushState(null, "", "/");
             const area = siteArea(site);
@@ -782,7 +803,13 @@ export default function MapApp() {
         />
       ) : null}
 
-      {introOpen ? <Intro onClose={closeIntro} onExample={showExample} /> : null}
+      {tour ? (
+        <Tour
+          key={tour}
+          steps={tour === "map" ? mapTour(showExample) : siteTour(selected?.kind === "investigation")}
+          onClose={closeTour}
+        />
+      ) : null}
     </div>
   );
 }

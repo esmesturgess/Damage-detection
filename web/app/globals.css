@@ -2,6 +2,7 @@
 @import "maplibre-gl/dist/maplibre-gl.css";
 
 :root {
+  --tour-ring: #f6efc8; /* the outline round the part a tour step explains */
   /* Manila paper, brick ink. The map keeps its dark satellite ground. */
   --paper: #f6efc8;
   --paper-deep: #efe5b8;

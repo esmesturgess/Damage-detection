@@ -44,6 +44,7 @@ export default function SiteOverlay({
   parent,
   onOpenSite,
   onStartHere,
+  onTour,
 }: {
   site: Site;
   handle: string;
@@ -54,6 +55,7 @@ export default function SiteOverlay({
   parent: Site | null;
   onOpenSite: (id: string) => void;
   onStartHere: (site: Site) => void;
+  onTour: () => void;
 }) {
   const isInvestigation = site.kind === "investigation";
   const hotspots = useHotspots(isInvestigation ? site.id : null);
@@ -146,7 +148,10 @@ export default function SiteOverlay({
           <span className="border-r border-[var(--rule)] px-5 py-3">
             {lat.toFixed(4)}°N {lon.toFixed(4)}°E
           </span>
-          <span className="flex-1 px-5 py-3">
+          <span className="flex flex-1 gap-5 px-5 py-3">
+            <button className="link" onClick={onTour} data-tour="tour-help">
+              tour
+            </button>
             <button
               className="link"
               onClick={() => {
@@ -181,12 +186,12 @@ export default function SiteOverlay({
                 </>
               ) : null}
             </div>
-            <div className="stamp mt-2" title={v.why}>
+            <div className="stamp mt-2" title={v.why} data-tour="stamp">
               {info.label}
               <div className="text-[11px] font-normal tracking-[0.06em] normal-case">{stampNote}</div>
             </div>
           </div>
-          <dl className="mt-7 grid grid-cols-2 border border-[var(--rule)] sm:grid-cols-4">
+          <dl className="mt-7 grid grid-cols-2 border border-[var(--rule)] sm:grid-cols-4" data-tour="facts">
             {facts.map((fact) => (
               <div key={fact.label} className="border-[var(--rule)] px-4 py-3 [&:not(:last-child)]:border-r">
                 <dt className="eyebrow">{fact.label}</dt>
@@ -199,10 +204,13 @@ export default function SiteOverlay({
         <div className="grid gap-10 px-8 pb-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)] lg:px-12">
           {/* Left: what the satellite saw, then what people have found */}
           <div className="min-w-0 space-y-10">
-            <SiteImagery siteId={site.id} />
+            <div data-tour="imagery">
+              <SiteImagery siteId={site.id} />
+            </div>
 
             {isInvestigation ? <HotspotList hotspots={hotspots} onOpen={onOpenSite} /> : null}
 
+            <div data-tour="prior">
             <PriorReports
               siteId={site.id}
               handle={handle}
@@ -216,8 +224,9 @@ export default function SiteOverlay({
               onSearched={() => setVersion((n) => n + 1)}
               onMessage={setMsg}
             />
+            </div>
 
-            <section>
+            <section data-tour="evidence">
               <h2 className="section-title flex items-end justify-between">
                 Evidence
                 {adding ? null : (
@@ -264,18 +273,20 @@ export default function SiteOverlay({
               </ul>
             </section>
 
+            <div data-tour="discussion">
             <Discussion
               comments={comments.filter((c) => c.evidence_id === null)}
               handle={handle}
               onHandle={onHandle}
               onPost={(body) => act(() => post(`/api/sites/${site.id}/comments`, { body, handle }), "")}
             />
+            </div>
           </div>
 
           {/* Right rail: the verdict so far, readings and actions */}
           <aside className="space-y-8 lg:sticky lg:top-6 lg:self-start">
             {isInvestigation ? null : parent ? (
-              <section className="border border-[var(--rule)] p-5">
+              <section className="border border-[var(--rule)] p-5" data-tour="parent">
                 <div className="eyebrow mb-1.5">Part of investigation</div>
                 <p className="mb-3 text-[15px] font-semibold">
                   {parent.name}
@@ -286,7 +297,7 @@ export default function SiteOverlay({
                 </button>
               </section>
             ) : (
-              <section className="border border-[var(--rule)] p-5">
+              <section className="border border-[var(--rule)] p-5" data-tour="parent">
                 <div className="eyebrow mb-3">Not part of an investigation</div>
                 <button className="btn btn-primary w-full" onClick={() => onStartHere(site)}>
                   Start investigation here
@@ -294,7 +305,7 @@ export default function SiteOverlay({
               </section>
             )}
 
-            <section className="border border-[var(--rule)] p-5">
+            <section className="border border-[var(--rule)] p-5" data-tour="ladder">
               <div className="eyebrow mb-3">Verification</div>
               <div className="mb-2 flex gap-1.5">
                 {LADDER.map((step) => {
@@ -317,7 +328,7 @@ export default function SiteOverlay({
 
             <EarthquakeCheck site={site} onChanged={onChanged} />
 
-            <section>
+            <section data-tour="verdict">
                 <div className="eyebrow mb-2">Your verdict</div>
                 <div className="mb-1.5 grid grid-cols-2 gap-2">
                   {(
@@ -347,7 +358,9 @@ export default function SiteOverlay({
           </aside>
         </div>
 
-        <SiteHistory siteId={site.id} version={version} />
+        <div data-tour="history">
+          <SiteHistory siteId={site.id} version={version} />
+        </div>
       </div>
 
       {msg ? (
@@ -497,7 +510,7 @@ function useHotspots(investigationId: string | null): Site[] {
 
 function HotspotList({ hotspots, onOpen }: { hotspots: Site[]; onOpen: (id: string) => void }) {
   return (
-    <section>
+    <section data-tour="hotspots">
       <h2 className="section-title">Radar hot-spots in this area</h2>
       {hotspots.length === 0 ? (
         <p className="muted border border-dashed border-[var(--line)] px-4 py-5 text-center">
@@ -569,7 +582,7 @@ function SiteHistory({ siteId, version }: { siteId: string; version: number }) {
 function SatelliteReading({ site }: { site: Site }) {
   const features = Object.entries(site.features ?? {}).filter(([, value]) => value != null);
   return (
-    <section>
+    <section data-tour="readings">
       <div className="eyebrow mb-2">Satellite readings</div>
       <dl className="divide-y divide-[var(--line)] border-y border-[var(--rule)]">
         <div className="flex justify-between gap-3 py-1.5">
@@ -602,7 +615,7 @@ function EarthquakeCheck({ site, onChanged }: { site: Site; onChanged: () => voi
   const top = seismic?.events?.[0];
 
   return (
-    <section>
+    <section data-tour="earthquakes">
       <div className="eyebrow mb-2">Earthquakes</div>
       {seismic?.flag ? (
         <p className="leading-snug">
