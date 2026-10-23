@@ -2,8 +2,8 @@
 
 export type AreaLayerId = "before" | "after" | "water" | "burn" | "change";
 
-/** Map stacking order, bottom to top. */
-export const AREA_LAYERS: AreaLayerId[] = ["before", "after", "water", "burn", "change"];
+/** Map stacking order, bottom to top. Water sits over the burn signal so it masks it. */
+export const AREA_LAYERS: AreaLayerId[] = ["before", "after", "burn", "water", "change"];
 
 type Window = { start: string; end: string };
 

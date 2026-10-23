@@ -469,7 +469,7 @@ export default function MapApp() {
       }
       if (map.getLayer(layerId)) {
         map.setLayoutProperty(layerId, "visibility", layerOn[id] ? "visible" : "none");
-        map.setPaintProperty(layerId, "raster-opacity", AREA_OPACITY);
+        map.setPaintProperty(layerId, "raster-opacity", id === "water" ? 1 : AREA_OPACITY); // a mask hides what's under it
       }
     }
   }, [analysis, aoi, layerOn, mapReady]);
@@ -664,16 +664,23 @@ export default function MapApp() {
     <div className="relative h-full w-full">
       <div ref={container} className="h-full w-full" />
 
-      {/* Name block, top left. 36px fills the 214px inside the padding (Newsreader 600). */}
-      <div className={`${CHROME} on-paper absolute left-4 top-4 flex h-[86px] w-[248px] items-center border border-[var(--rule)] px-4`}>
-        <h1 className="display whitespace-nowrap text-[36px] font-semibold leading-none">Corroborator</h1>
-        <button
-          className="link absolute right-2 top-1.5 text-[11px]"
-          onClick={() => setTour(selected ? "site" : "map")}
-          data-tour="help"
-        >
-          Help
-        </button>
+      {/* Name block, top left. League Gothic capitals stretched to the box: cap height is 0.743em, so 83.4px
+          type gives 62px capitals; textLength makes the word exactly the box's inner width. */}
+      <div className={`${CHROME} on-paper absolute left-4 top-4 flex h-[86px] w-[248px] items-center border border-[var(--rule)] px-[10px]`}>
+        <h1 className="w-full">
+          <svg viewBox="0 0 226 62" className="block w-full" role="img" aria-label="Corroborator">
+            <text
+              x="0"
+              y="62"
+              textLength="226"
+              lengthAdjust="spacingAndGlyphs"
+              fill="var(--accent)"
+              style={{ fontFamily: "var(--font-league)", fontSize: 83.4, fontVariationSettings: '"wdth" 75' }}
+            >
+              CORROBORATOR
+            </text>
+          </svg>
+        </h1>
       </div>
 
       <div className="pointer-events-none absolute left-[276px] right-4 top-4" data-tour="timebar">
@@ -776,11 +783,14 @@ export default function MapApp() {
               </label>
             ) : null}
           </div>
-          {outsideDates ? (
-            <p className="faint mt-2 text-[12px]">
-              {outsideDates} {outsideDates === 1 ? "site" : "sites"} outside these dates
-            </p>
-          ) : null}
+          <div className="mt-2 flex items-baseline justify-between gap-3 text-[12px]">
+            <span className="faint">
+              {outsideDates ? `${outsideDates} ${outsideDates === 1 ? "site" : "sites"} outside these dates` : null}
+            </span>
+            <button className="link" onClick={() => setTour(selected ? "site" : "map")} data-tour="help">
+              Help
+            </button>
+          </div>
         </div>
       </section>
 

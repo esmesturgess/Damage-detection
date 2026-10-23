@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Courier_Prime, Newsreader, Schibsted_Grotesk } from "next/font/google";
+import { Courier_Prime, League_Gothic, Newsreader, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 
 // Case-file type: a news serif for titles, a news grotesk for reading, and a
@@ -15,6 +15,13 @@ const sans = Schibsted_Grotesk({
   subsets: ["latin"],
 });
 
+// Tall condensed capitals for the name block.
+const masthead = League_Gothic({
+  variable: "--font-league",
+  subsets: ["latin"],
+  axes: ["wdth"],
+});
+
 const mono = Courier_Prime({
   variable: "--font-courier",
   subsets: ["latin"],
@@ -28,7 +35,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable} h-full antialiased`}>
+    <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable} ${masthead.variable} h-full antialiased`}>
       <body className="h-full overflow-hidden">{children}</body>
     </html>
   );
