@@ -131,7 +131,7 @@ def _images(aoi: dict[str, Any], baseline: dict[str, str], event: dict[str, str]
             "after_window": {"start": event["start"], "end": post_end.isoformat()},
         }
         if product == L1C:
-            notes.append("Burn layer uses Level-1C (top of atmosphere): the burn detector was trained on Level-2A, so read it as provisional.")
+            notes.append("Burn layer uses Level-1C (top of atmosphere, no atmospheric correction), so its values are less reliable.")
 
     return {"images": images, "optical": optical_info, "notes": notes}
 

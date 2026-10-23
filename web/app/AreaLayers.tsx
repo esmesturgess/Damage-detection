@@ -67,21 +67,62 @@ export default function AreaLayers({
     <div className="space-y-2.5">
       <LayerRow
         title="Radar change"
-        note="Change in built-up areas, weak to strong. Not proof of damage on its own."
+        summary="Where radar echoes from built-up land changed most against the year before. Any strong change, not only damage."
         on={on.change}
         disabled={!layers.change}
         onToggle={(v) => onToggle("change", v)}
         steps={CHANGE_STEPS}
-      />
+      >
+        <p>
+          <a className="link" href="https://github.com/oballinger/PWTT" target="_blank" rel="noreferrer">
+            Pixel-Wise T-Test (PWTT)
+          </a>{" "}
+          by Ollie Ballinger (MIT licence), with robustness fixes by Imogen Dexter. Method:{" "}
+          <a className="link" href="https://doi.org/10.1016/j.rse.2025.115025" target="_blank" rel="noreferrer">
+            Ballinger, <i>Remote Sensing of Environment</i> 331 (2025)
+          </a>
+          .
+        </p>
+        <p>
+          Sentinel-1 radar, both polarisations (VV, VH), speckle-filtered and log-scaled. For each satellite orbit, a
+          Welch t-test compares each pixel&apos;s images in the 12 months before the window with those inside it. Orbits
+          are combined (Stouffer&apos;s method) and the stronger polarisation kept.
+        </p>
+        <p>
+          The result is smoothed over 10–150 m, so it is not strictly per pixel, and kept only where Dynamic World mapped
+          built-up land the year before. A pixel needs at least 3 images before and 2 during.
+        </p>
+        <p>
+          Shown from 3 (yellow) to 5 and above (purple): how far the change sits outside the place&apos;s normal
+          variation. It flags destruction, but also construction, demolition, flooding or crops beside buildings.
+        </p>
+      </LayerRow>
       <LayerRow
         title="Burn signal"
-        note="Vegetation and roof loss consistent with fire, low to severe."
+        summary="Where land changed in the way fire changes it, against the year before. Harvest and clearing can look the same."
         on={on.burn}
         disabled={!layers.burn}
         onToggle={(v) => onToggle("burn", v)}
         steps={BURN_STEPS}
-      />
-      {optical.provisional && optical.product ? <p className="muted text-[12px]">Burn signal uses provisional imagery.</p> : null}
+      >
+        <p>
+          Difference in Normalised Burn Ratio (dNBR), a standard fire-severity index (Key &amp; Benson, USGS). NBR compares
+          near-infrared (Sentinel-2 band 8) with short-wave infrared (band 12). Burning lowers the first and raises the
+          second.
+        </p>
+        <p>
+          Before: the median of cloud-free pixels over the 12 months before the window. After: the median over the window,
+          widened by up to 90 days when no clear scene exists. Clouds are removed with s2cloudless.
+        </p>
+        <p>
+          Shown from 0.1 (pale yellow, low severity) to 0.66 (dark red, high), the USGS severity classes. Harvest, land
+          clearing and seasonal drying also raise it, and a 12-month &ldquo;before&rdquo; mixes seasons. This is the raw
+          index, not the trained burn classifier.
+        </p>
+      </LayerRow>
+      {optical.provisional && optical.product ? (
+        <p className="muted text-[12px]">Burn signal from Level-1C imagery (no atmospheric correction): less reliable.</p>
+      ) : null}
 
       <div className="flex items-center gap-2">
         <span className="flex-1">Photo</span>
@@ -127,21 +168,24 @@ export default function AreaLayers({
 
 function LayerRow({
   title,
-  note,
+  summary,
   on,
   disabled,
   onToggle,
   steps,
+  children,
 }: {
   title: string;
-  note: string;
+  summary: string;
   on: boolean;
   disabled: boolean;
   onToggle: (v: boolean) => void;
   steps: string[];
+  children: React.ReactNode;
 }) {
   return (
-    <label className={`flex cursor-pointer items-center gap-2 ${disabled ? "opacity-40" : ""}`} title={note}>
+    <div className={disabled ? "opacity-40" : ""}>
+      <label className="flex cursor-pointer items-center gap-2">
       <input
         type="checkbox"
         className="check"
@@ -155,6 +199,12 @@ function LayerRow({
           <span key={c} className="h-2 w-3.5" style={{ background: c }} />
         ))}
       </span>
-    </label>
+      </label>
+      <p className="muted mt-1 pl-[21px] text-[12px] leading-snug">{summary}</p>
+      <details className="pl-[21px] text-[12px]">
+        <summary className="link cursor-pointer list-none">How it&apos;s calculated</summary>
+        <div className="mt-1.5 space-y-1.5 leading-snug">{children}</div>
+      </details>
+    </div>
   );
 }

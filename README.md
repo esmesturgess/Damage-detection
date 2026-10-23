@@ -112,4 +112,4 @@ pytest
 
 ## Acknowledgements
 
-Pixel-Wise T-Test by Ollie Ballinger (MIT), vendored in `core/_vendor/pwtt` with robustness fixes by Imogen Dexter. Earthquake data from the USGS. Globe imagery: Sentinel-2 cloudless 2016 by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2016). Labels © OpenStreetMap contributors, © CARTO.
+Pixel-Wise T-Test by Ollie Ballinger ([github.com/oballinger/PWTT](https://github.com/oballinger/PWTT), MIT), vendored in `core/_vendor/pwtt` with robustness fixes by Imogen Dexter. Method: Ballinger, O. (2025). Open access battle damage detection via Pixel-Wise T-Test on Sentinel-1 imagery. *Remote Sensing of Environment* 331, 115025. https://doi.org/10.1016/j.rse.2025.115025. Burn signal: dNBR (Key & Benson, USGS FIREMON). Earthquake data from the USGS. Globe imagery: Sentinel-2 cloudless 2016 by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2016). Labels © OpenStreetMap contributors, © CARTO.
