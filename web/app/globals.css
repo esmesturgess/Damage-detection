@@ -248,3 +248,7 @@ button:disabled {
 .on-brick .switch:checked::after {
   background: var(--brick-bg);
 }
+/* The site overlay sits on top of brick chrome, so it uses a deeper brick. */
+.overlay-brick {
+  --brick-bg: #57211a;
+}

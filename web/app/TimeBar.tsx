@@ -66,7 +66,7 @@ export default function TimeBar({
   if (start < 12) notes.push("Baseline starts before Sentinel-1 coverage; fewer prior scenes.");
 
   return (
-    <div className="panel pointer-events-auto px-5 pb-2 pt-3">
+    <div className="panel on-brick pointer-events-auto px-5 pb-2 pt-3">
       <div className="mb-1 flex items-baseline justify-between gap-4">
         <span className="text-[15px] font-semibold">
           {label(start)} <span className="muted font-normal">→</span> {label(end)}
@@ -81,7 +81,7 @@ export default function TimeBar({
           title="Radar only (no Sentinel-2 optical yet)"
         />
         <div
-          className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-[var(--accent)]"
+          className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-[#f4efe6]"
           style={{ left: `${pct(start)}%`, width: `${pct(end) - pct(start)}%` }}
         />
         <input

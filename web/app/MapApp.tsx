@@ -495,9 +495,9 @@ export default function MapApp() {
         <TimeBar start={range[0]} end={range[1]} onChange={(s, e) => setRange([s, e])} />
       </div>
 
-      <aside className="absolute bottom-0 left-0 top-0 flex w-72 flex-col border-r border-[var(--line)] bg-[var(--panel)]">
+      <aside className="on-brick absolute bottom-0 left-0 top-0 flex w-72 flex-col border-r border-black/30">
         <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-4 py-4">
-          <span className="h-3 w-3 rounded-sm bg-[var(--accent)]" />
+          <span className="h-3 w-3 rounded-sm bg-[#f4efe6]" />
           <span className="flex-1 text-[15px] font-semibold tracking-tight">Burn Evidence</span>
           <button
             className="btn h-7 w-7 rounded-full p-0 text-[13px]"

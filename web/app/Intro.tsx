@@ -18,9 +18,9 @@ const STEPS = [
 export default function Intro({ onClose, onExample }: { onClose: () => void; onExample: () => void }) {
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 p-6">
-      <div className="panel w-full max-w-lg p-7">
+      <div className="panel on-brick w-full max-w-lg p-7">
         <div className="mb-1 flex items-center gap-2.5">
-          <span className="h-3 w-3 rounded-sm bg-[var(--accent)]" />
+          <span className="h-3 w-3 rounded-sm bg-[#f4efe6]" />
           <h1 className="text-[18px] font-semibold tracking-tight">Burn Evidence</h1>
         </div>
         <p className="muted mb-6">

@@ -89,188 +89,213 @@ export default function SiteOverlay({
 
   const [lon, lat] = site.geometry.coordinates;
   const window_ = (site.timestamps as { event_window?: string[] } | null)?.event_window;
+  const f = site.features ?? {};
+  const facts: { label: string; value: string }[] = [
+    { label: "Window", value: window_ ? dateRange(window_[0], window_[1]) : "—" },
+    { label: "Radar change", value: site.pwtt_z != null ? site.pwtt_z.toFixed(1) : "—" },
+    { label: "Burn, strongest 5%", value: f.p95_dnbr != null ? Number(f.p95_dnbr).toFixed(2) : "—" },
+    { label: "Evidence", value: String(v.evidence_count) },
+    { label: "Independent sources", value: String(v.independent_sources) },
+  ];
 
   return (
-    <div className="on-brick fixed inset-0 z-30 overflow-auto" role="dialog" aria-modal="true" aria-label={site.name ?? "Site"}>
-      <header className="sticky top-0 z-10 border-b border-[var(--line)] bg-[var(--brick-bg)] px-8 py-4">
-        <div className="mx-auto flex max-w-4xl items-center gap-4">
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[20px] font-semibold tracking-tight">{site.name ?? site.id}</h1>
-            <p className="muted num text-[12px]">
-              {lat.toFixed(4)}, {lon.toFixed(4)}
-              {window_ ? ` · ${window_[0]} → ${window_[1]}` : ""}
-              {" · "}
-              <button
-                className="link"
-                onClick={() => {
-                  navigator.clipboard?.writeText(window.location.href).then(
-                    () => setMsg("Link copied."),
-                    () => setMsg(window.location.href),
-                  );
-                }}
-              >
-                copy link
-              </button>
-            </p>
-          </div>
-          <span className="flex items-center gap-2 rounded-full bg-black/25 px-3 py-1">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: info.color }} />
-            {info.label}
-          </span>
-          <button
-            className="flex h-10 w-10 items-center justify-center rounded-full text-[26px] leading-none hover:bg-white/10"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </div>
-      </header>
+    <div
+      className="fixed inset-0 z-30 bg-black/55 p-3 md:p-6"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      role="dialog"
+      aria-modal="true"
+      aria-label={site.name ?? "Site"}
+    >
+      <div className="on-brick overlay-brick relative h-full overflow-auto rounded-2xl border border-[var(--line)] shadow-2xl">
+        <button
+          className="absolute right-5 top-5 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/20 text-[24px] leading-none hover:bg-black/35"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          ×
+        </button>
 
-      <main className="mx-auto max-w-4xl space-y-10 px-8 py-8">
-      <SiteImagery siteId={site.id} />
-
-      <section className="grid gap-6 md:grid-cols-2">
-      <div>
-      <div className="eyebrow mb-2">Verification</div>
-      {/* Level */}
-      <div className="mb-6 rounded-lg border p-3.5" style={{ borderColor: info.color + "55", background: info.color + "10" }}>
-        <div className="mb-1 flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: info.color }} />
-          <span className="font-semibold" style={{ color: info.color }}>
-            {info.label}
-          </span>
-        </div>
-        <p className="muted mb-3 leading-snug">{v.why}</p>
-        {v.level === "explained" || v.level === "disputed" ? null : (
-          <div className="mb-2 flex gap-1">
-            {LADDER.map((step) => {
-              const reached = LADDER.indexOf(step) <= LADDER.indexOf(v.level as (typeof LADDER)[number]);
-              return (
-                <div key={step} className="flex-1">
-                  <div
-                    className="mb-1 h-1 rounded-full"
-                    style={{ background: reached ? levelInfo(step).color : "rgba(255,255,255,0.1)" }}
-                  />
-                  <span className={`text-[11px] ${reached ? "" : "faint"}`}>{levelInfo(step).label}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        <div className="faint text-[12px]">
-          {v.evidence_count} evidence item{v.evidence_count === 1 ? "" : "s"} · {v.independent_sources} independent
-          source{v.independent_sources === 1 ? "" : "s"}
-        </div>
-      </div>
-
-      </div>
-      <SatelliteReading site={site} onChanged={onChanged} />
-      </section>
-
-      {/* Evidence */}
-      <section className="mb-6">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="eyebrow">Evidence</span>
-          {adding ? null : (
-            <button className="btn px-2.5 py-1 text-[12px]" onClick={() => setAdding(true)}>
-              + Add evidence
-            </button>
-          )}
-        </div>
-        {adding ? (
-          <AddEvidence
-            handle={handle}
-            onHandle={onHandle}
-            onCancel={() => setAdding(false)}
-            onSubmit={async (body) => {
-              const ok = await act(() => post(`/api/sites/${site.id}/evidence`, body), "Evidence added. A reviewer will check it.");
-              if (ok) setAdding(false);
-              return ok;
-            }}
-          />
-        ) : null}
-        {evidence.length === 0 && !adding ? <p className="muted">No evidence yet.</p> : null}
-        <ul className="space-y-2">
-          {evidence.map((item) => (
-            <EvidenceItem
-              key={item.id}
-              item={item}
-              others={evidence.filter((e) => e.id !== item.id)}
-              reviewer={reviewer}
-              onCheck={(check) =>
-                act(() => post(`/api/evidence/${item.id}/check`, check, reviewerHeaders(reviewer)), "Check saved.")
-              }
-            />
-          ))}
-        </ul>
-      </section>
-
-      {/* Agreement */}
-      <section className="mb-6">
-        <div className="eyebrow mb-2">Do you agree?</div>
-        <div className="mb-1.5 grid grid-cols-3 gap-2">
-          {(["agree", "disagree", "unsure"] as const).map((stance) => (
+        {/* Case-file cover */}
+        <header className="border-b border-[var(--line)] px-8 pb-6 pt-7 lg:px-10">
+          <div className="eyebrow mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="text-[var(--foreground)]">Case file</span>
+            <span>{site.region ?? "unassigned region"}</span>
+            <span className="num">
+              {lat.toFixed(4)}°N {lon.toFixed(4)}°E
+            </span>
             <button
-              key={stance}
-              className="btn capitalize"
-              onClick={() =>
-                handle.trim()
-                  ? act(() => post(`/api/sites/${site.id}/assessment`, { handle, stance }), "Thanks, noted.")
-                  : setMsg("Pick a handle first (any name; it's never shown). Use “Add evidence” to set one.")
-              }
+              className="link normal-case tracking-normal"
+              onClick={() => {
+                navigator.clipboard?.writeText(window.location.href).then(
+                  () => setMsg("Link copied."),
+                  () => setMsg(window.location.href),
+                );
+              }}
             >
-              {stance}
-              <span className="num muted">{v.agreement[stance]}</span>
+              copy link
             </button>
-          ))}
-        </div>
-        <p className="faint text-[12px] leading-snug">Agreement helps reviewers prioritise. Only evidence changes the level.</p>
-      </section>
-
-      {reviewer.enabled ? (
-        <section className="mb-6">
-          <div className="eyebrow mb-2">Reviewer verdict</div>
-          <div className="mb-1.5 grid grid-cols-2 gap-2">
-            {(
-              [
-                ["confirm", "Sign off as verified"],
-                ["explained", "Explained"],
-                ["disputed", "Disputed"],
-                ["reject", "False detection"],
-              ] as const
-            ).map(([verdict, text]) => (
-              <button
-                key={verdict}
-                className="btn"
-                onClick={() =>
-                  act(() => post(`/api/sites/${site.id}/verdict`, { verdict }, reviewerHeaders(reviewer)), "Verdict saved.")
-                }
-              >
-                {text}
-              </button>
-            ))}
           </div>
-          <p className="faint text-[12px] leading-snug">
-            Sign-off counts only with 2+ independent sources, from a reviewer who checked none of them.
-          </p>
-        </section>
-      ) : null}
+          <div className="flex flex-wrap items-end justify-between gap-4 pr-14">
+            <h1 className="max-w-3xl text-[30px] font-semibold leading-[1.1] tracking-tight lg:text-[36px]">
+              {site.name ?? site.id}
+            </h1>
+            <span className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-black/20 px-3.5 py-1.5 text-[14px]">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: info.color }} />
+              {info.label}
+            </span>
+          </div>
+          <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
+            {facts.map((fact) => (
+              <div key={fact.label} className="border-l-2 border-[var(--line)] pl-3">
+                <dt className="faint text-[11px] uppercase tracking-[0.12em]">{fact.label}</dt>
+                <dd className="mt-0.5 whitespace-nowrap text-[20px] font-medium leading-tight">{fact.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </header>
 
-      <section>
-        <div className="eyebrow mb-2">Discussion</div>
-        <p className="muted rounded-lg border border-dashed border-[var(--line)] px-4 py-6 text-center">
-          Comments on each evidence item and an open thread for this site are coming next.
-        </p>
-      </section>
+        <div className="grid gap-8 px-8 py-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)] lg:px-10">
+          {/* Left: what the satellite saw, then what people have found */}
+          <div className="min-w-0 space-y-10">
+            <SiteImagery siteId={site.id} />
 
-      <SiteHistory siteId={site.id} version={version} />
+            <section>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-[18px] font-semibold">Evidence</h2>
+                {adding ? null : (
+                  <button className="btn btn-primary px-3 py-1.5" onClick={() => setAdding(true)}>
+                    + Add evidence
+                  </button>
+                )}
+              </div>
+              {adding ? (
+                <AddEvidence
+                  handle={handle}
+                  onHandle={onHandle}
+                  onCancel={() => setAdding(false)}
+                  onSubmit={async (body) => {
+                    const ok = await act(() => post(`/api/sites/${site.id}/evidence`, body), "Evidence added. A colleague will check it.");
+                    if (ok) setAdding(false);
+                    return ok;
+                  }}
+                />
+              ) : null}
+              {evidence.length === 0 && !adding ? (
+                <p className="muted rounded-xl border border-dashed border-[var(--line)] px-4 py-6 text-center">
+                  No evidence yet. Links, testimony, photos and video all help.
+                </p>
+              ) : null}
+              <ul className="grid gap-3 xl:grid-cols-2">
+                {evidence.map((item) => (
+                  <EvidenceItem
+                    key={item.id}
+                    item={item}
+                    others={evidence.filter((e) => e.id !== item.id)}
+                    reviewer={reviewer}
+                    onCheck={(check) =>
+                      act(() => post(`/api/evidence/${item.id}/check`, check, reviewerHeaders(reviewer)), "Check saved.")
+                    }
+                  />
+                ))}
+              </ul>
+            </section>
 
-      {site.is_demo ? <p className="faint text-[12px]">Demo location: synthetic data, not a finding.</p> : null}
-      </main>
+            <section>
+              <h2 className="mb-3 text-[18px] font-semibold">Discussion</h2>
+              <p className="muted rounded-xl border border-dashed border-[var(--line)] px-4 py-6 text-center">
+                Comments on each evidence item and an open thread for this site are coming next.
+              </p>
+            </section>
+          </div>
+
+          {/* Right rail: the verdict so far, readings and actions */}
+          <aside className="space-y-8 lg:sticky lg:top-6 lg:self-start">
+            <section className="rounded-xl bg-black/20 p-5">
+              <div className="eyebrow mb-3">Verification</div>
+              <div className="mb-4 flex gap-1.5">
+                {LADDER.map((step) => {
+                  const reached =
+                    v.level !== "explained" &&
+                    v.level !== "disputed" &&
+                    LADDER.indexOf(step) <= LADDER.indexOf(v.level as (typeof LADDER)[number]);
+                  return (
+                    <div key={step} className="flex-1">
+                      <div
+                        className="mb-1.5 h-1.5 rounded-full"
+                        style={{ background: reached ? levelInfo(step).color : "rgba(255,255,255,0.14)" }}
+                      />
+                      <span className={`text-[12px] ${reached ? "" : "faint"}`}>{levelInfo(step).label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[15px] font-semibold" style={{ color: info.color }}>
+                {info.label}
+              </p>
+              <p className="muted mt-1 leading-snug">{v.why}</p>
+            </section>
+
+            <SatelliteReading site={site} onChanged={onChanged} />
+
+            <section>
+              <div className="eyebrow mb-2">Do you agree?</div>
+              <div className="mb-1.5 grid grid-cols-3 gap-2">
+                {(["agree", "disagree", "unsure"] as const).map((stance) => (
+                  <button
+                    key={stance}
+                    className="btn flex-col gap-0 py-2 capitalize"
+                    onClick={() =>
+                      handle.trim()
+                        ? act(() => post(`/api/sites/${site.id}/assessment`, { handle, stance }), "Thanks, noted.")
+                        : setMsg("Pick a handle first (any name; it's never shown). Use “Add evidence” to set one.")
+                    }
+                  >
+                    <span className="num text-[18px] leading-tight">{v.agreement[stance]}</span>
+                    <span className="muted text-[12px]">{stance}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="faint text-[12px] leading-snug">Agreement helps prioritise. Only evidence changes the level.</p>
+            </section>
+
+            {reviewer.enabled ? (
+              <section>
+                <div className="eyebrow mb-2">Your verdict</div>
+                <div className="mb-1.5 grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      ["confirm", "Sign off as verified"],
+                      ["explained", "Explained"],
+                      ["disputed", "Disputed"],
+                      ["reject", "False detection"],
+                    ] as const
+                  ).map(([verdict, text]) => (
+                    <button
+                      key={verdict}
+                      className="btn"
+                      onClick={() =>
+                        act(() => post(`/api/sites/${site.id}/verdict`, { verdict }, reviewerHeaders(reviewer)), "Verdict saved.")
+                      }
+                    >
+                      {text}
+                    </button>
+                  ))}
+                </div>
+                <p className="faint text-[12px] leading-snug">
+                  Sign-off counts only with 2+ independent sources, from someone who checked none of them.
+                </p>
+              </section>
+            ) : null}
+
+            {site.is_demo ? <p className="faint text-[12px]">Demo location: synthetic data, not a finding.</p> : null}
+          </aside>
+        </div>
+
+        <SiteHistory siteId={site.id} version={version} />
+      </div>
 
       {msg ? (
-        <div className="fixed bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-full bg-[#f4efe6] px-4 py-2 text-[#5a2318] shadow-lg">
+        <div className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 rounded-full bg-[#f4efe6] px-4 py-2 text-[#5a2318] shadow-lg">
           {msg}
           <button className="ml-3 opacity-60 hover:opacity-100" onClick={() => setMsg("")} aria-label="Dismiss">
             ×
@@ -281,21 +306,34 @@ export default function SiteOverlay({
   );
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "25 Aug – 15 Sep 2017", or with both years when they differ. */
+function dateRange(startIso: string, endIso: string): string {
+  const [y1, m1, d1] = startIso.split("-").map(Number);
+  const [y2, m2, d2] = endIso.split("-").map(Number);
+  const start = `${d1} ${MONTHS[m1 - 1]}${y1 === y2 ? "" : ` ${y1}`}`;
+  return `${start} – ${d2} ${MONTHS[m2 - 1]} ${y2}`;
+}
+
 const IMAGES = [
   { id: "before", label: "Before" },
   { id: "after", label: "After" },
-  { id: "change", label: "After + radar change" },
-  { id: "burn", label: "After + burn signal" },
+  { id: "change", label: "Radar change" },
+  { id: "burn", label: "Burn signal" },
 ] as const;
+type ImageId = (typeof IMAGES)[number]["id"];
 
 type SiteImages = {
-  layers: Partial<Record<(typeof IMAGES)[number]["id"], { url: string }>>;
+  layers: Partial<Record<ImageId, { url: string }>>;
   optical: { before_window?: { start: string; end: string }; after_window?: { start: string; end: string } };
   notes: string[];
 };
 
 function SiteImagery({ siteId }: { siteId: string }) {
   const [state, setState] = useState<{ siteId: string; data?: SiteImages; error?: string } | null>(null);
+  const [view, setView] = useState<ImageId | "compare">("after");
+  const [split, setSplit] = useState(50);
 
   useEffect(() => {
     let cancelled = false;
@@ -312,33 +350,69 @@ function SiteImagery({ siteId }: { siteId: string }) {
   }, [siteId]);
 
   const current = state?.siteId === siteId ? state : null;
+  const layers = current?.data?.layers ?? {};
+  const optical = current?.data?.optical;
+  const caption =
+    view === "before"
+      ? optical?.before_window
+      : view === "compare"
+        ? undefined
+        : optical?.after_window;
+
   return (
     <section>
-      <div className="eyebrow mb-2">Imagery</div>
-      {current?.error ? <p className="muted">{current.error}</p> : null}
-      <div className="grid grid-cols-2 gap-3">
-        {IMAGES.map((img) => {
-          const url = current?.data?.layers[img.id]?.url;
-          const w = img.id === "before" ? current?.data?.optical.before_window : current?.data?.optical.after_window;
-          return (
-            <figure key={img.id}>
-              <div className="aspect-square overflow-hidden rounded-lg bg-black/25">
-                {url ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- Earth Engine thumbnails, not static assets
-                  <img src={url} alt={img.label} className="h-full w-full object-cover" />
-                ) : current?.error ? null : (
-                  <div className="flex h-full items-center justify-center">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-white/60" />
-                  </div>
-                )}
-              </div>
-              <figcaption className="mt-1.5 flex justify-between text-[12px]">
-                <span>{img.label}</span>
-                {w ? <span className="faint num">{w.start} → {w.end}</span> : null}
-              </figcaption>
-            </figure>
-          );
-        })}
+      <div className="relative aspect-[16/10] max-h-[460px] w-full overflow-hidden rounded-xl bg-black/30">
+        {current?.error ? (
+          <p className="muted absolute inset-0 flex items-center justify-center p-6 text-center">{current.error}</p>
+        ) : view === "compare" && layers.before && layers.after ? (
+          <>
+            {/* eslint-disable @next/next/no-img-element -- Earth Engine thumbnails, not static assets */}
+            <img src={layers.after.url} alt="After" className="absolute inset-0 h-full w-full object-cover" />
+            <img
+              src={layers.before.url}
+              alt="Before"
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{ clipPath: `inset(0 ${100 - split}% 0 0)` }}
+            />
+            {/* eslint-enable @next/next/no-img-element */}
+            <div className="pointer-events-none absolute inset-y-0 w-0.5 bg-white shadow" style={{ left: `${split}%` }} />
+            <span className="absolute left-3 top-3 rounded bg-black/50 px-2 py-0.5 text-[12px]">Before</span>
+            <span className="absolute right-3 top-3 rounded bg-black/50 px-2 py-0.5 text-[12px]">After</span>
+            <input
+              aria-label="Compare before and after"
+              type="range"
+              min={0}
+              max={100}
+              value={split}
+              onChange={(e) => setSplit(Number(e.target.value))}
+              className="absolute inset-0 h-full w-full cursor-ew-resize opacity-0"
+            />
+          </>
+        ) : view !== "compare" && layers[view] ? (
+          // eslint-disable-next-line @next/next/no-img-element -- Earth Engine thumbnails, not static assets
+          <img src={layers[view]!.url} alt={view} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full items-center justify-center gap-2">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-white/70" />
+            <span className="muted">Loading imagery from Earth Engine…</span>
+          </div>
+        )}
+        {caption ? (
+          <span className="num absolute bottom-3 left-3 rounded bg-black/50 px-2 py-0.5 text-[12px]">
+            {caption.start} → {caption.end}
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {[...IMAGES, { id: "compare" as const, label: "Compare" }].map((img) => (
+          <button
+            key={img.id}
+            className={`btn px-3 py-1.5 ${view === img.id ? "btn-primary" : ""}`}
+            onClick={() => setView(img.id)}
+          >
+            {img.label}
+          </button>
+        ))}
       </div>
       {current?.data?.notes.map((n) => (
         <p key={n} className="muted mt-2 text-[12px]">
@@ -364,17 +438,22 @@ function SiteHistory({ siteId, version }: { siteId: string; version: number }) {
   }, [siteId, version]);
 
   return (
-    <section>
-      <div className="eyebrow mb-2">History</div>
-      {events.length === 0 ? <p className="muted">No recorded activity yet.</p> : null}
-      <ol className="space-y-1.5">
-        {events.map((e, i) => (
-          <li key={i} className="flex gap-4">
-            <span className="faint num w-36 shrink-0 text-[12px]">{e.at.slice(0, 16).replace("T", " ")}</span>
-            <span>{e.summary}</span>
-          </li>
-        ))}
-      </ol>
+    <section className="border-t border-[var(--line)] px-8 py-7 lg:px-10">
+      <h2 className="mb-4 text-[18px] font-semibold">History</h2>
+      {events.length === 0 ? (
+        <p className="muted">No recorded activity yet.</p>
+      ) : (
+        <ol className="relative flex gap-8 overflow-x-auto pb-2">
+          <span className="absolute left-0 right-0 top-[5px] h-px bg-[var(--line)]" aria-hidden />
+          {events.map((e, i) => (
+            <li key={i} className="relative w-48 shrink-0">
+              <span className="relative mb-3 block h-[11px] w-[11px] rounded-full border-2 border-[var(--brick-bg)] bg-[#f4efe6]" />
+              <div className="faint num text-[12px]">{e.at.slice(0, 16).replace("T", " ")}</div>
+              <div className="leading-snug">{e.summary}</div>
+            </li>
+          ))}
+        </ol>
+      )}
     </section>
   );
 }

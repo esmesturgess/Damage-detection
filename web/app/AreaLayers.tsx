@@ -45,7 +45,7 @@ export default function AreaLayers({
   if (analysis.status === "idle" || analysis.status === "loading") {
     return (
       <p className="muted flex items-center gap-2">
-        <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--accent)]" />
+        <span className="h-2 w-2 animate-pulse rounded-full bg-[#f4efe6]" />
         Loading imagery for these dates…
       </p>
     );
