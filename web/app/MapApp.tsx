@@ -524,7 +524,23 @@ export default function MapApp() {
     };
   }, [drawing]);
 
+  // What the map looked like before the tour put its example box down, so closing the tour puts it back.
+  const beforeTour = useRef<{ range: [number, number]; aoi: GeoJSON.Polygon | null; coordText: string } | null>(null);
+
+  function tourExample() {
+    beforeTour.current ??= { range, aoi, coordText };
+    showExample();
+  }
+
   function closeTour() {
+    const before = beforeTour.current;
+    if (before) {
+      beforeTour.current = null;
+      setRange(before.range);
+      setCoordText(before.coordText);
+      if (before.aoi) setAoi(before.aoi);
+      else clearArea();
+    }
     if (tour) {
       try {
         localStorage.setItem(TOUR_SEEN[tour], "1");
@@ -806,7 +822,7 @@ export default function MapApp() {
       {tour ? (
         <Tour
           key={tour}
-          steps={tour === "map" ? mapTour(showExample) : siteTour(selected?.kind === "investigation")}
+          steps={tour === "map" ? mapTour(tourExample) : siteTour(selected?.kind === "investigation")}
           onClose={closeTour}
         />
       ) : null}

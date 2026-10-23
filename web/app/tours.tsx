@@ -128,10 +128,25 @@ function siteSteps(kind: string): TourStep[] {
       target: "prior",
       title: "Prior reports",
       body: (
-        <p>
-          Search ACLED for incidents documented near here around these dates. Results are the raw records, with ACLED&apos;s own
-          location and date precision. Add as evidence puts one in the evidence list, where a colleague checks it.
-        </p>
+        <>
+          <p>
+            Incidents other people have already documented here. This searches ACLED, the Armed Conflict Location &amp; Event
+            Data project, which records political violence and protest worldwide from news, local partners and other
+            sources.
+          </p>
+          <p>
+            Pick a radius and press Search ACLED. It looks a month either side of these dates, because ACLED sometimes only
+            knows the week or month.
+          </p>
+          <p>
+            Each record shows the date, place and distance, the event type, ACLED&apos;s notes, sources, actors and fatalities,
+            and how exact ACLED says the place and date are.
+          </p>
+          <p>
+            Add as evidence copies a record into Evidence, where a colleague checks it like any other item. Every search is
+            kept in History. Until there&apos;s ACLED API access, results are labelled sample records.
+          </p>
+        </>
       ),
     },
     {
@@ -151,7 +166,19 @@ function siteSteps(kind: string): TourStep[] {
     {
       target: "discussion",
       title: "Discussion",
-      body: <p>Talk it through with colleagues, here or under any piece of evidence. Comments never change the level.</p>,
+      body: (
+        <>
+          <p>
+            One thread for everyone working on this {kind}: share leads, ask a colleague to look at something, note what
+            you&apos;ve ruled out and why.
+          </p>
+          <p>Each piece of evidence has its own thread too: press Comment under the item.</p>
+          <p>
+            Comments are signed with your handle and kept. They never change the verification level; only checked evidence
+            and verdicts do.
+          </p>
+        </>
+      ),
     },
     {
       target: "parent",

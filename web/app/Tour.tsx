@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CHROME } from "@/lib/look";
 
 export type TourStep = {
@@ -34,6 +34,8 @@ export default function Tour({ steps, onClose }: { steps: TourStep[]; onClose: (
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [ready, setReady] = useState(false);
   const [direction, setDirection] = useState<1 | -1>(1);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [cardH, setCardH] = useState(240);
   const step = steps[index];
   const last = index === steps.length - 1;
 
@@ -117,7 +119,12 @@ export default function Tour({ steps, onClose }: { steps: TourStep[]; onClose: (
     return () => window.removeEventListener("keydown", onKey, true);
   }, [go, index, onClose]);
 
-  const card = placeCard(rect);
+  // Place the card by its real height, which varies with the step's text.
+  useLayoutEffect(() => {
+    if (ready && cardRef.current) setCardH(cardRef.current.offsetHeight);
+  }, [ready, index]);
+
+  const card = placeCard(rect, cardH);
 
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={`Tour: ${step.title}`}>
@@ -140,6 +147,7 @@ export default function Tour({ steps, onClose }: { steps: TourStep[]; onClose: (
 
       {ready ? (
         <div
+          ref={cardRef}
           className={`${CHROME} on-paper absolute border border-[var(--rule)] p-5 shadow-2xl`}
           style={{ width: CARD_W, maxWidth: "calc(100vw - 24px)", ...card }}
         >
@@ -168,11 +176,10 @@ export default function Tour({ steps, onClose }: { steps: TourStep[]; onClose: (
 }
 
 /** Below the target if it fits, else above, else beside it; always on screen. */
-function placeCard(rect: DOMRect | null): React.CSSProperties {
+function placeCard(rect: DOMRect | null, estH: number): React.CSSProperties {
   if (typeof window === "undefined" || !rect) return { left: "50%", top: "50%", transform: "translate(-50%, -50%)" };
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const estH = 240;
   const clampX = (x: number) => Math.min(Math.max(12, x), vw - CARD_W - 12);
   const clampY = (y: number) => Math.min(Math.max(12, y), vh - estH - 12);
   if (rect.bottom + GAP + estH < vh) return { left: clampX(rect.left), top: rect.bottom + GAP + PAD };
