@@ -15,6 +15,7 @@ from core.config import settings
 from core.coverage import check_coverage
 from core.gee import GeeUnavailable
 from core.history import site_history
+from core.fires import FiresError, latest_fire_search, search_fire_detections
 from core.geocode import GeocodeError, search_places
 from core.investigations import (
     InvestigationError,
@@ -328,6 +329,28 @@ def post_prior_reports(site_id: str, body: PriorReportsIn) -> dict[str, Any]:
         raise HTTPException(status_code=status, detail=str(exc)) from exc
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"ACLED unreachable: {exc}") from exc
+
+
+class FiresIn(BaseModel):
+    radius_km: float = Field(default=2.0, gt=0, le=50)
+    handle: str | None = None
+
+
+@app.get("/sites/{site_id}/fires")
+def get_fires(site_id: str) -> dict[str, Any] | None:
+    """The last saved fire-detection search for this site, or null."""
+    get_site(site_id)
+    return latest_fire_search(site_id)
+
+
+@app.post("/sites/{site_id}/fires")
+def post_fires(site_id: str, body: FiresIn) -> dict[str, Any]:
+    """NASA FIRMS fire detections near this site during its event window. Data only."""
+    get_site(site_id)
+    try:
+        return search_fire_detections(site_id, radius_km=body.radius_km, searched_by=(body.handle or "").strip() or "investigator")
+    except FiresError as exc:
+        raise HTTPException(status_code=503 if "FIRMS_MAP_KEY" in str(exc) else 502, detail=str(exc)) from exc
 
 
 class ReportEvidenceIn(BaseModel):

@@ -155,6 +155,23 @@ function siteSteps(kind: string): TourStep[] {
       ),
     },
     {
+      target: "fires",
+      title: "Fire detections",
+      body: (
+        <>
+          <p>
+            NASA FIRMS records every satellite pixel that was unusually hot when a satellite passed: VIIRS at 375 m since
+            2012, MODIS at 1 km since 2000. Search shows the detections near here during these dates.
+          </p>
+          <p>
+            Each row gives the time (UTC), distance, sensor, the sensor&apos;s own confidence and fire radiative power (FRP).
+            A detection doesn&apos;t say what burned: crop and forest fires look the same as burning houses. Cloud, smoke and
+            the gaps between passes can hide fires, so none found isn&apos;t proof of none.
+          </p>
+        </>
+      ),
+    },
+    {
       target: "evidence",
       title: "Evidence",
       body: (

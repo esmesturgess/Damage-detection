@@ -4,6 +4,7 @@ import { CHROME } from "@/lib/look";
 
 import { useEffect, useState } from "react";
 import Discussion, { EvidenceComments } from "./Discussion";
+import FireDetections from "./FireDetections";
 import PriorReports from "./PriorReports";
 import { levelInfo, siteCentre, type Comment, type Evidence, type EvidenceCheck, type Site } from "@/lib/types";
 
@@ -224,6 +225,15 @@ export default function SiteOverlay({
               onSearched={() => setVersion((n) => n + 1)}
               onMessage={setMsg}
             />
+            </div>
+
+            <div data-tour="fires">
+              <FireDetections
+                siteId={site.id}
+                handle={handle}
+                onSearched={() => setVersion((n) => n + 1)}
+                onMessage={setMsg}
+              />
             </div>
 
             <section data-tour="evidence">

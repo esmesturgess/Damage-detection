@@ -80,6 +80,8 @@ Seven read-only tools over the same core as the API: `check_coverage`, `screen_f
 
 Prior reports come from ACLED, which needs a licensed account with API access. Until then, `ACLED_SAMPLE=true` returns fictional records labelled as samples.
 
+Fire detections come from NASA FIRMS (VIIRS from 2012, MODIS from 2000): set `FIRMS_MAP_KEY` in `.env` with a free key from https://firms.modaps.eosdis.nasa.gov/api/map_key/.
+
 ## Architecture
 
 ```
@@ -112,4 +114,4 @@ pytest
 
 ## Acknowledgements
 
-Pixel-Wise T-Test by Ollie Ballinger ([github.com/oballinger/PWTT](https://github.com/oballinger/PWTT), MIT), vendored in `core/_vendor/pwtt` with robustness fixes by Imogen Dexter. Method: Ballinger, O. (2025). Open access battle damage detection via Pixel-Wise T-Test on Sentinel-1 imagery. *Remote Sensing of Environment* 331, 115025. https://doi.org/10.1016/j.rse.2025.115025. Burn signal: dNBR (Key & Benson, USGS FIREMON). Earthquake data from the USGS. Globe imagery: Sentinel-2 cloudless 2016 by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2016). Labels © OpenStreetMap contributors, © CARTO.
+Pixel-Wise T-Test by Ollie Ballinger ([github.com/oballinger/PWTT](https://github.com/oballinger/PWTT), MIT), vendored in `core/_vendor/pwtt` with robustness fixes by Imogen Dexter. Method: Ballinger, O. (2025). Open access battle damage detection via Pixel-Wise T-Test on Sentinel-1 imagery. *Remote Sensing of Environment* 331, 115025. https://doi.org/10.1016/j.rse.2025.115025. Burn signal: dNBR (Key & Benson, USGS FIREMON). Earthquake data from the USGS. Fire detections: we acknowledge the use of data from NASA's Fire Information for Resource Management System (FIRMS), part of NASA's Earth Science Data and Information System (ESDIS). Globe imagery: Sentinel-2 cloudless 2016 by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2016). Labels © OpenStreetMap contributors, © CARTO.

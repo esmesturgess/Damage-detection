@@ -17,6 +17,7 @@ TOOLS = {
     "check_seismic_confound",
     "get_evidence_bundle",
     "search_prior_reports",
+    "search_fire_detections",
 }
 
 

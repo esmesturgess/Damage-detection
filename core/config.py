@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     acled_password: SecretStr = SecretStr("")
     # Fictional ACLED-shaped records instead of the API, for building without access.
     acled_sample: bool = False
+    # NASA FIRMS key for fire detections (free: https://firms.modaps.eosdis.nasa.gov/api/map_key/).
+    firms_map_key: SecretStr = SecretStr("")
 
 
 settings = Settings()

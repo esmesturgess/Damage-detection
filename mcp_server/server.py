@@ -15,6 +15,7 @@ from core.bundle import get_evidence_bundle as core_bundle
 from core.burn import classify_burn as core_classify
 from core.coverage import check_coverage as core_coverage
 from core.db import init_db
+from core.fires import search_fire_detections as core_fires
 from core.prior_reports import search_prior_reports as core_prior_reports
 from core.pwtt import scan_result as core_scan_result
 from core.pwtt import screen_for_change as core_screen
@@ -31,8 +32,9 @@ Usual order for an area and dates: check_coverage, then screen_for_change,
 then get_scan_result (scans take minutes), then classify_burn on the site
 ids it returns. check_seismic_confound belongs only to sites that changed
 on radar but are not burn-positive. search_prior_reports finds documented
-incidents (ACLED) near a site or area; get_evidence_bundle gives one site's
-full satellite record."""
+incidents (ACLED) near a site or area; search_fire_detections finds NASA
+FIRMS active-fire detections; get_evidence_bundle gives one site's full
+satellite record."""
 
 mcp = FastMCP("burn-evidence-screening", instructions=INSTRUCTIONS)
 
@@ -130,6 +132,28 @@ def search_prior_reports(
     Every search is recorded against the site. The query is sent to ACLED.
     """
     return core_prior_reports(site_id, _area(aoi_geojson), start_date, end_date, radius_km, searched_by="agent")
+
+
+@mcp.tool()
+def search_fire_detections(
+    site_id: str | None = None,
+    aoi_geojson: Area | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    radius_km: float = 2.0,
+) -> dict[str, Any]:
+    """NASA FIRMS active-fire detections near a site or area during its dates, earliest first.
+
+    Give a site_id to use its area and event window, or aoi_geojson with start_date and
+    end_date (YYYY-MM-DD, at most 366 days). Each detection is one satellite pixel (VIIRS
+    375 m from 2012, MODIS 1 km from 2000) that was unusually hot at acq_date acq_time UTC.
+    confidence is the sensor's own (VIIRS low/nominal/high, MODIS 0-100%); frp_mw is fire
+    radiative power. A detection does not say what burned: crop and forest fires look the
+    same as burning houses, and type (archive data only) marks known volcanoes and static
+    sources such as gas flares. No detections is not proof of no fire: cloud, smoke and the
+    time between satellite passes all hide fires. Every search is recorded against the site.
+    """
+    return core_fires(site_id, _area(aoi_geojson), start_date, end_date, radius_km, searched_by="agent")
 
 
 def main() -> None:

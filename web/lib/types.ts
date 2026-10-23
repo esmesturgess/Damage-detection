@@ -92,6 +92,33 @@ export type PriorReport = {
   sources: string[];
 };
 
+export type FireDetection = {
+  source: string;
+  satellite: string | null;
+  instrument: string;
+  lat: number;
+  lon: number;
+  distance_km: number;
+  acq_date: string;
+  acq_time: string;
+  daynight: "day" | "night" | null;
+  confidence: string | null;
+  frp_mw: number | null;
+  brightness_k: number | null;
+  type: string | null;
+  pixel_m: number;
+};
+
+export type FireSearch = {
+  search_id: string;
+  searched: { radius_km: number; dates: [string, string]; sources: string[] };
+  searched_by: string;
+  searched_at: string;
+  truncated: boolean;
+  count: number;
+  detections: FireDetection[];
+};
+
 export type PriorReportSearch = {
   search_id: string;
   searched: { source: string; radius_km: number; dates: [string, string]; dates_searched: [string, string] };

@@ -112,6 +112,20 @@ CREATE TABLE IF NOT EXISTS prior_report_searches (
 
 CREATE INDEX IF NOT EXISTS idx_prior_searches_site ON prior_report_searches(site_id, created_at);
 
+-- Every NASA FIRMS fire-detection search, kept like prior-report searches.
+CREATE TABLE IF NOT EXISTS fire_searches (
+    id TEXT PRIMARY KEY,
+    site_id TEXT,
+    params_json TEXT NOT NULL,
+    result_count INTEGER NOT NULL,
+    truncated INTEGER NOT NULL DEFAULT 0,
+    detections_json TEXT,
+    searched_by TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_fire_searches_site ON fire_searches(site_id, created_at);
+
 -- Discussion. evidence_id null = the site's open thread. Append-only.
 CREATE TABLE IF NOT EXISTS comments (
     id TEXT PRIMARY KEY,
