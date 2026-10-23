@@ -66,7 +66,7 @@ export default function TimeBar({
   if (start < 12) notes.push("Baseline starts before Sentinel-1 coverage; fewer prior scenes.");
 
   return (
-    <div className="panel on-paper pointer-events-auto px-5 pb-2 pt-3">
+    <div className="chrome on-paper pointer-events-auto flex min-h-[86px] flex-col justify-center border border-[var(--rule)] px-5 pb-2 pt-2.5">
       <div className="mb-1 flex items-baseline justify-between gap-4">
         <span className="display text-[20px] font-semibold">
           {label(start)} <span className="muted font-normal">→</span> {label(end)}
@@ -76,7 +76,7 @@ export default function TimeBar({
       <div className="relative h-6">
         <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-[var(--line)]" />
         <div
-          className="absolute top-1/2 h-1 -translate-y-1/2 bg-[repeating-linear-gradient(45deg,rgba(143,53,34,0.35)_0_3px,transparent_3px_6px)]"
+          className="absolute top-1/2 h-1 -translate-y-1/2 bg-[repeating-linear-gradient(45deg,rgba(241,233,207,0.35)_0_3px,transparent_3px_6px)]"
           style={{ left: 0, width: `${pct(OPTICAL_FROM)}%` }}
           title="Radar only (no Sentinel-2 optical yet)"
         />
@@ -110,7 +110,7 @@ export default function TimeBar({
           </span>
         ))}
       </div>
-      {notes.length ? <div className="mt-1 text-[12px] text-[var(--accent)] font-semibold">{notes.join(" · ")}</div> : null}
+      {notes.length ? <div className="mt-1 text-[12px] font-semibold">{notes.join(" · ")}</div> : null}
     </div>
   );
 }

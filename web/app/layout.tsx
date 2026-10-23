@@ -22,7 +22,7 @@ const mono = Courier_Prime({
 });
 
 export const metadata: Metadata = {
-  title: "Burn Evidence Screening",
+  title: "Burn and change detection",
   description: "PWTT change screening, LightGBM burn classification, seismic confound, human verdict.",
 };
 

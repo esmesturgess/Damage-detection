@@ -251,7 +251,61 @@ button:disabled {
   text-decoration: underline;
 }
 
-/* Paper surfaces: the sidebar, time bar, dialogs and site pages. */
+/* Map chrome (name block, time bar, controls) reverses the case file:
+   oxblood ground, pale yellow type. Same building blocks, swapped tokens. */
+.chrome {
+  --paper: #6b261b;
+  --foreground: #f1e9cf;
+  --accent: #f1e9cf;
+  --accent-hover: #fff7de;
+  --accent-soft: rgba(241, 233, 207, 0.12);
+  --muted: #d8c4a4;
+  --faint: #d8c4a4;
+  --line: rgba(241, 233, 207, 0.3);
+  --rule: rgba(241, 233, 207, 0.75);
+  --field: rgba(0, 0, 0, 0.18);
+}
+.chrome .btn-primary {
+  color: #6b261b;
+}
+/* Square checkbox in the text colour. */
+.check {
+  appearance: none;
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+  border: 1px solid var(--rule);
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+}
+.check:checked::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  background: var(--foreground);
+}
+.check:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+/* The button under a drawn box. */
+.map-cta {
+  background: #6b261b;
+  color: #f1e9cf;
+  border: 1px solid rgba(241, 233, 207, 0.75);
+  padding: 8px 16px;
+  font-weight: 500;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.map-cta:hover:not(:disabled) {
+  background: #5a1f16;
+}
+.map-cta:disabled {
+  opacity: 0.8;
+}
+
+/* Paper surfaces: dialogs and site pages. */
 .on-paper {
   background: var(--paper);
   color: var(--foreground);

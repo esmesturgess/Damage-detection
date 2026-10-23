@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
+  AttributionControl,
   Map,
   GeoJSONSource,
   Marker,
@@ -210,8 +211,10 @@ export default function MapApp() {
           style: withImagery(carto),
           center: RAKHINE,
           zoom: 4.6,
-          attributionControl: { compact: true },
+          attributionControl: false,
         });
+        // Credits bottom left: the controls panel takes the bottom right.
+        map.addControl(new AttributionControl({ compact: true }), "bottom-left");
         created = map;
         mapRef.current = map;
         map.on("load", () => {
@@ -232,7 +235,7 @@ export default function MapApp() {
             id: "aoi-line",
             type: "line",
             source: "aoi",
-            paint: { "line-color": "#ffffff", "line-width": 1.5, "line-dasharray": [2, 1] },
+            paint: { "line-color": "#f1e9cf", "line-width": 1.75, "line-dasharray": [2, 1] },
           });
           map.addSource("investigations", { type: "geojson", data: emptyFc() });
           map.addLayer({
@@ -357,7 +360,7 @@ export default function MapApp() {
         ? { type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: aoi }] }
         : emptyFc(),
     );
-  }, [aoi, mapReady]);
+  }, [aoi, mapReady, drawing]); // drawing: restore the saved box after a cancelled drag
 
   const aoiIsInvestigation = useMemo(
     () =>
@@ -378,7 +381,7 @@ export default function MapApp() {
     }
     if (!startMarker.current) {
       const button = document.createElement("button");
-      button.className = "btn btn-primary shadow-lg";
+      button.className = "map-cta";
       button.addEventListener("click", () => markerAction.current());
       startMarker.current = new Marker({ element: button, anchor: "top", offset: [0, 10] });
     }
@@ -460,42 +463,53 @@ export default function MapApp() {
     }
   }, [analysis, aoi, layerOn, mapReady]);
 
+  // Box drawing: press, drag (the box follows the pointer), release.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (drawing) map.dragPan.disable();
-    else map.dragPan.enable();
+    if (!drawing) {
+      map.dragPan.enable();
+      map.getCanvas().style.cursor = "";
+      return;
+    }
+    map.dragPan.disable();
+    map.getCanvas().style.cursor = "crosshair";
+    const preview = map.getSource("aoi") as GeoJSONSource | undefined;
+    let startPoint: { x: number; y: number } | null = null;
     const onDown = (e: MapMouseEvent) => {
-      if (!drawing) return;
       drawStart.current = [e.lngLat.lng, e.lngLat.lat];
+      startPoint = e.point;
+    };
+    const onMove = (e: MapMouseEvent) => {
+      if (!drawStart.current) return;
+      const box = rectangle(drawStart.current, [e.lngLat.lng, e.lngLat.lat]);
+      preview?.setData({ type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: box }] });
     };
     const onUp = (e: MapMouseEvent) => {
-      if (!drawing || !drawStart.current) return;
-      const [x0, y0] = drawStart.current;
-      const x1 = e.lngLat.lng;
-      const y1 = e.lngLat.lat;
-      const west = Math.min(x0, x1);
-      const east = Math.max(x0, x1);
-      const south = Math.min(y0, y1);
-      const north = Math.max(y0, y1);
-      setAoi({
-        type: "Polygon",
-        coordinates: [[
-          [west, south],
-          [east, south],
-          [east, north],
-          [west, north],
-          [west, south],
-        ]],
-      });
-      setDrawing(false);
+      if (!drawStart.current || !startPoint) return;
+      const tooSmall = Math.abs(e.point.x - startPoint.x) < 6 || Math.abs(e.point.y - startPoint.y) < 6;
+      if (!tooSmall) {
+        setAoi(rectangle(drawStart.current, [e.lngLat.lng, e.lngLat.lat]));
+        setDrawing(false);
+      }
       drawStart.current = null;
+      startPoint = null;
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      drawStart.current = null;
+      setDrawing(false);
     };
     map.on("mousedown", onDown);
+    map.on("mousemove", onMove);
     map.on("mouseup", onUp);
+    window.addEventListener("keydown", onKey);
     return () => {
       map.off("mousedown", onDown);
+      map.off("mousemove", onMove);
       map.off("mouseup", onUp);
+      window.removeEventListener("keydown", onKey);
+      map.getCanvas().style.cursor = "";
     };
   }, [drawing]);
 
@@ -609,123 +623,118 @@ export default function MapApp() {
     <div className="relative h-full w-full">
       <div ref={container} className="h-full w-full" />
 
-      <div className="pointer-events-none absolute left-[calc(18rem+16px)] right-4 top-4">
+      {/* Name block, top left. Room for a logo. */}
+      <div className="chrome on-paper absolute left-4 top-4 flex h-[86px] w-[248px] items-center gap-3 border border-[var(--rule)] px-4">
+        <h1 className="display flex-1 text-[22px] font-semibold leading-[1.05]">Burn and change detection</h1>
+        <button className="link self-start pt-3 text-[12px]" onClick={() => setIntroOpen(true)}>
+          Help
+        </button>
+      </div>
+
+      <div className="pointer-events-none absolute left-[276px] right-4 top-4">
         <TimeBar start={range[0]} end={range[1]} onChange={(s, e) => setRange([s, e])} />
       </div>
 
-      <aside className="on-paper absolute bottom-0 left-0 top-0 flex w-72 flex-col border-r-2 border-[var(--rule)]">
-        <div className="flex items-center gap-2.5 border-b-2 border-[var(--rule)] px-4 py-4">
-          <span className="display flex-1 text-[24px] font-semibold leading-none">Burn Evidence</span>
-          <button
-            className="btn h-7 w-7 rounded-full p-0 text-[13px]"
-            onClick={() => setIntroOpen(true)}
-            aria-label="How to use"
-            title="How to use"
-          >
-            ?
-          </button>
-        </div>
-        <div className="flex-1 space-y-5 overflow-auto p-4">
-          <section>
-            <div className="eyebrow mb-2">Area</div>
-            {aoi ? null : (
-              <p className="muted mb-3">Pick an area to see imagery for these dates and scan it for change.</p>
-            )}
+      {/* Controls, bottom right: area, layers, key. */}
+      <section className="chrome on-paper absolute bottom-4 right-4 flex max-h-[calc(100%-140px)] w-[300px] flex-col overflow-auto border border-[var(--rule)]">
+        <div className="border-b border-[var(--line)] p-3">
+          <div className="flex gap-2">
             <button
-              className={`btn mb-2 w-full ${drawing ? "btn-active" : ""}`}
+              className={`btn shrink-0 ${drawing ? "btn-active" : ""}`}
               onClick={() => setDrawing(!drawing)}
             >
-              {drawing ? "Drag a box on the map…" : aoi ? "Draw a new box" : "Draw a box"}
+              {drawing ? "Cancel" : aoi ? "New box" : "Draw a box"}
             </button>
             <form
-              className="flex gap-2"
+              className="flex min-w-0 flex-1 border border-[var(--rule)]"
               onSubmit={(e) => {
                 e.preventDefault();
                 applyCoordinates();
               }}
             >
               <input
-                className="field num"
-                placeholder="or lat, lon"
+                className="num min-w-0 flex-1 bg-transparent px-2 text-[13px] outline-none placeholder:text-[var(--muted)]"
+                placeholder="lat, lon"
+                aria-label="Coordinates"
                 value={coordText}
                 onChange={(e) => setCoordText(e.target.value)}
               />
-              <button className="btn px-3" aria-label="Go to coordinates">
+              <button className="border-l border-[var(--rule)] px-2.5" aria-label="Go to coordinates">
                 →
               </button>
             </form>
-            {aoi ? (
-              <div className="mt-3 flex gap-2">
-                <button className="btn btn-primary flex-1" onClick={runScan} disabled={scanStatus === "scanning"}>
-                  {scanStatus === "scanning" ? "Scanning…" : scanStatus === "done" ? "Scan again" : "Scan for change"}
-                </button>
-                <button className="btn" onClick={clearArea}>
-                  Clear
-                </button>
-              </div>
-            ) : null}
-            {probeMsg ? <p className="muted mt-2">{probeMsg}</p> : null}
-            {error ? <p className="mt-2 text-[var(--accent)] font-semibold">{error}</p> : null}
-          </section>
-
-          {aoi ? (
-            <section>
-              <div className="eyebrow mb-2">Layers</div>
-              <AreaLayers
-                analysis={analysis}
-                on={layerOn}
-                onToggle={(id, value) => setLayerOn((prev) => ({ ...prev, [id]: value }))}
-                tileTrouble={tileTrouble}
-                onRetry={() => {
-                  setTileTrouble(false);
-                  for (const id of AREA_LAYERS) {
-                    const src = mapRef.current?.getSource(`area-${id}`) as RasterTileSource | undefined;
-                    const url = shownLayers.current[id];
-                    if (src && url) src.setTiles([url]); // re-requests the layer's tiles
-                  }
-                }}
-              />
-            </section>
+          </div>
+          {drawing ? <p className="muted mt-2 text-[12px]">Drag on the map to draw the box. Esc cancels.</p> : null}
+          {aoi && !drawing ? (
+            <div className="mt-2 flex justify-between text-[12px]">
+              <button className="link" onClick={runScan} disabled={scanStatus === "scanning"}>
+                {scanStatus === "scanning" ? "Scanning…" : scanStatus === "done" ? "Scan again" : "Scan for change"}
+              </button>
+              <button className="link" onClick={clearArea}>
+                Clear box
+              </button>
+            </div>
           ) : null}
+          {probeMsg ? <p className="muted mt-2 text-[12px] leading-snug">{probeMsg}</p> : null}
+          {error ? <p className="mt-2 text-[12px] font-semibold">{error}</p> : null}
+        </div>
 
-          <section>
-            <div className="eyebrow mb-2">Verification</div>
-            <ul className="space-y-1">
-              {LEVELS.filter((l) => l.id !== "ruled_out" && (l.id !== "disputed" || counts.disputed)).map((l) => (
-                <li
-                  key={l.id}
-                  className={`flex items-center gap-2.5 ${l.id === "detected" && !showDetected ? "faint" : ""}`}
-                  title={l.note}
-                >
-                  <LevelMark level={l} />
-                  <span>{l.label}</span>
-                </li>
-              ))}
-            </ul>
-            <label className="mt-3 flex cursor-pointer items-center gap-2.5">
+        {aoi ? (
+          <div className="border-b border-[var(--line)] p-3">
+            <AreaLayers
+              analysis={analysis}
+              on={layerOn}
+              onToggle={(id, value) => setLayerOn((prev) => ({ ...prev, [id]: value }))}
+              tileTrouble={tileTrouble}
+              onRetry={() => {
+                setTileTrouble(false);
+                for (const id of AREA_LAYERS) {
+                  const src = mapRef.current?.getSource(`area-${id}`) as RasterTileSource | undefined;
+                  const url = shownLayers.current[id];
+                  if (src && url) src.setTiles([url]); // re-requests the layer's tiles
+                }
+              }}
+            />
+          </div>
+        ) : null}
+
+        <div className="p-3 text-[13px]">
+          <ul className="mb-2 flex flex-wrap gap-x-3.5 gap-y-1">
+            {LEVELS.filter((l) => l.id !== "ruled_out" && (l.id !== "disputed" || counts.disputed)).map((l) => (
+              <li
+                key={l.id}
+                className={`flex items-center gap-1.5 ${l.id === "detected" && !showDetected ? "faint" : ""}`}
+                title={l.note}
+              >
+                <LevelMark level={l} />
+                {l.label}
+              </li>
+            ))}
+          </ul>
+          <div className="muted flex gap-4 text-[12px]">
+            <label className="flex cursor-pointer items-center gap-1.5">
               <input
                 type="checkbox"
-                className="switch"
+                className="check"
                 checked={showDetected}
                 onChange={(e) => setShowDetected(e.target.checked)}
               />
-              <span>Show unreviewed detections</span>
+              Unreviewed
             </label>
             {counts.ruled_out ? (
-              <label className="mt-2 flex cursor-pointer items-center gap-2.5" title={levelInfo("ruled_out").note}>
+              <label className="flex cursor-pointer items-center gap-1.5" title={levelInfo("ruled_out").note}>
                 <input
                   type="checkbox"
-                  className="switch"
+                  className="check"
                   checked={showRuledOut}
                   onChange={(e) => setShowRuledOut(e.target.checked)}
                 />
-                <span>Show ruled out</span>
+                Ruled out
               </label>
             ) : null}
-          </section>
+          </div>
         </div>
-
-      </aside>
+      </section>
 
       {selected ? (
         <SiteOverlay
@@ -766,15 +775,26 @@ export default function MapApp() {
   );
 }
 
-/** A legend swatch drawn like the map mark. Paper outlines turn ink so they show on the sidebar. */
+/** A legend swatch drawn like the map mark. Paper outlines take the text colour so they show on the panel. */
 function LevelMark({ level }: { level: (typeof LEVELS)[number] }) {
-  const stroke = level.stroke === "#f4efe6" ? "#5e2416" : level.stroke;
+  const stroke = level.stroke === "#f4efe6" ? "var(--foreground)" : level.stroke;
   return (
     <span
-      className="inline-block h-3.5 w-3.5 shrink-0 rounded-full"
-      style={{ background: level.fill, border: `${Math.min(level.strokeWidth, 2)}px solid ${stroke}` }}
+      className="inline-block h-3 w-3 shrink-0 rounded-full"
+      style={{ background: level.fill, border: `1px solid ${stroke}` }}
     />
   );
+}
+
+function rectangle([x0, y0]: [number, number], [x1, y1]: [number, number]): GeoJSON.Polygon {
+  const west = Math.min(x0, x1);
+  const east = Math.max(x0, x1);
+  const south = Math.min(y0, y1);
+  const north = Math.max(y0, y1);
+  return {
+    type: "Polygon",
+    coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]],
+  };
 }
 
 function emptyFc(): GeoJSON.FeatureCollection {

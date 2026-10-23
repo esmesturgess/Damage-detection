@@ -20,7 +20,7 @@ export default function Intro({ onClose, onExample }: { onClose: () => void; onE
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 p-6">
       <div className="panel on-paper w-full max-w-lg p-7">
         <div className="mb-1 flex items-center gap-2.5">
-          <h1 className="display text-[34px] font-semibold leading-none">Burn Evidence</h1>
+          <h1 className="display text-[34px] font-semibold leading-none">Burn and change detection</h1>
         </div>
         <p className="muted mb-6">
           Find burning and destruction in satellite imagery, then build the evidence for what happened.

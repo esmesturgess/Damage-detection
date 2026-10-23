@@ -26,8 +26,9 @@ export type Analysis =
   | { status: "error"; error: string }
   | { status: "ready"; data: AnalysisData };
 
-const CHANGE_RAMP = "linear-gradient(90deg, #ffff00, #ff0000, #800080)";
-const BURN_RAMP = "linear-gradient(90deg, #fff7bc, #fec44f, #f03b20, #7f0000)";
+// Same palettes as CHANGE_VIS and BURN_VIS in core/imagery.py, weak to strong.
+const CHANGE_STEPS = ["#6b261b", "#9a4a35", "#c98a62", "#e6c493", "#f6ecc8"];
+const BURN_STEPS = ["#cfc8bb", "#9a938a", "#6b655d", "#3f3a35", "#1d1a17"];
 
 export default function AreaLayers({
   analysis,
@@ -44,14 +45,14 @@ export default function AreaLayers({
 }) {
   if (analysis.status === "idle" || analysis.status === "loading") {
     return (
-      <p className="muted flex items-center gap-2">
-        <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--accent)]" />
+      <p className="muted flex items-center gap-2 text-[12px]">
+        <span className="h-2 w-2 animate-pulse bg-[var(--accent)]" />
         Loading imagery for these dates…
       </p>
     );
   }
   if (analysis.status === "error") {
-    return <p className="text-[var(--accent)] font-semibold">{analysis.error}</p>;
+    return <p className="text-[12px] font-semibold">{analysis.error}</p>;
   }
 
   const { layers, optical, notes } = analysis.data;
@@ -63,65 +64,60 @@ export default function AreaLayers({
   const scenes = (w?: Window, n?: number) => (w ? `${w.start} → ${w.end} · ${n} scenes` : "");
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       <LayerRow
         title="Radar change"
+        note="Change in built-up areas, weak to strong. Not proof of damage on its own."
         on={on.change}
         disabled={!layers.change}
         onToggle={(v) => onToggle("change", v)}
-        ramp={CHANGE_RAMP}
-        rampLabels={["low", "strong"]}
-      >
-        Change in built-up areas. Not proof of damage on its own.
-      </LayerRow>
-
+        steps={CHANGE_STEPS}
+      />
       <LayerRow
         title="Burn signal"
+        note="Vegetation and roof loss consistent with fire, low to severe."
         on={on.burn}
         disabled={!layers.burn}
         onToggle={(v) => onToggle("burn", v)}
-        ramp={BURN_RAMP}
-        rampLabels={["low", "severe"]}
-      >
-        Vegetation and roof loss consistent with fire.
-        {optical.provisional && optical.product ? <span className="text-[var(--accent)]"> Provisional imagery.</span> : null}
-      </LayerRow>
+        steps={BURN_STEPS}
+      />
+      {optical.provisional && optical.product ? <p className="muted text-[12px]">Burn signal uses provisional imagery.</p> : null}
 
-      <div>
-        <div className="mb-1.5">Satellite photo</div>
-        <div className="seg">
+      <div className="flex items-center gap-2">
+        <span className="flex-1">Photo</span>
+        <div className="seg text-[12px]">
           {(["off", "before", "after"] as const).map((v) => (
             <button
               key={v}
               aria-pressed={trueColour === v}
               disabled={v !== "off" && !layers[v]}
               onClick={() => setTrueColour(v)}
-              className="capitalize disabled:opacity-30"
+              className="capitalize !px-2 !py-0.5 disabled:opacity-30"
             >
               {v}
             </button>
           ))}
         </div>
-        {trueColour !== "off" ? (
-          <p className="faint num mt-1 text-[11px]">
-            {trueColour === "before"
-              ? scenes(optical.before_window, optical.pre_scenes)
-              : scenes(optical.after_window, optical.post_scenes)}
-          </p>
-        ) : null}
       </div>
+      {trueColour !== "off" ? (
+        <p className="faint num -mt-1 text-right text-[11px]">
+          {trueColour === "before"
+            ? scenes(optical.before_window, optical.pre_scenes)
+            : scenes(optical.after_window, optical.post_scenes)}
+        </p>
+      ) : null}
 
       {tileTrouble ? (
-        <div className="flex items-center justify-between gap-2 bg-[var(--accent-soft)] px-3 py-2 text-[12px] text-[var(--accent)] font-semibold">
-          <span>Earth Engine didn&apos;t render some tiles (busy or timed out).</span>
-          <button className="btn shrink-0 px-2.5 py-1 text-[12px]" onClick={onRetry}>
+        <div className="flex items-center justify-between gap-2 text-[12px] font-semibold">
+          <span>Earth Engine didn&apos;t render some tiles.</span>
+          <button className="link shrink-0" onClick={onRetry}>
             Retry
           </button>
         </div>
       ) : null}
 
       {notes.map((n) => (
-        <p key={n} className="text-[12px] text-[var(--accent)] font-semibold">
+        <p key={n} className="text-[12px] font-semibold">
           {n}
         </p>
       ))}
@@ -131,39 +127,34 @@ export default function AreaLayers({
 
 function LayerRow({
   title,
+  note,
   on,
   disabled,
   onToggle,
-  ramp,
-  rampLabels,
-  children,
+  steps,
 }: {
   title: string;
+  note: string;
   on: boolean;
   disabled: boolean;
   onToggle: (v: boolean) => void;
-  ramp: string;
-  rampLabels: [string, string];
-  children: React.ReactNode;
+  steps: string[];
 }) {
   return (
-    <div className={disabled ? "opacity-40" : ""}>
-      <label className="mb-1.5 flex cursor-pointer items-center gap-2.5">
-        <input
-          type="checkbox"
-          className="switch"
-          checked={on && !disabled}
-          disabled={disabled}
-          onChange={(e) => onToggle(e.target.checked)}
-        />
-        <span>{title}</span>
-      </label>
-      <div className="h-1.5 w-full rounded-full" style={{ background: ramp }} />
-      <div className="faint mb-1 mt-0.5 flex justify-between text-[11px]">
-        <span>{rampLabels[0]}</span>
-        <span>{rampLabels[1]}</span>
-      </div>
-      <p className="muted text-[12px] leading-snug">{children}</p>
-    </div>
+    <label className={`flex cursor-pointer items-center gap-2 ${disabled ? "opacity-40" : ""}`} title={note}>
+      <input
+        type="checkbox"
+        className="check"
+        checked={on && !disabled}
+        disabled={disabled}
+        onChange={(e) => onToggle(e.target.checked)}
+      />
+      <span className="flex-1">{title}</span>
+      <span className="flex gap-0.5" aria-hidden>
+        {steps.map((c) => (
+          <span key={c} className="h-2 w-3.5" style={{ background: c }} />
+        ))}
+      </span>
+    </label>
   );
 }
