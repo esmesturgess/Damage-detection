@@ -552,9 +552,13 @@ export default function MapApp() {
     setTour(null);
   }
 
-  // The site page's own tour runs the first time someone opens a site.
+  // The site page's own tour runs the first time someone opens a site, and ends if the page closes.
   useEffect(() => {
-    if (!selectedId || tour) return;
+    if (!selectedId) {
+      if (tour === "site") queueMicrotask(() => setTour(null));
+      return;
+    }
+    if (tour) return;
     let seen = true;
     try {
       seen = localStorage.getItem(TOUR_SEEN.site) === "1";

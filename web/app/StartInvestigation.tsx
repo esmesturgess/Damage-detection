@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CHROME } from "@/lib/look";
 import { levelInfo, type Level } from "@/lib/types";
 
 type Window = { start: string; end: string };
@@ -92,7 +93,7 @@ export default function StartInvestigation({
       className="absolute inset-0 z-30 flex items-center justify-center bg-black/55 p-6"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="panel on-paper w-full max-w-xl p-7">
+      <div className={`${CHROME} panel on-paper w-full max-w-xl p-7`}>
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2 className="display mb-1 text-[30px] font-semibold leading-none">New investigation</h2>

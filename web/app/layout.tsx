@@ -1,31 +1,34 @@
 import type { Metadata } from "next";
-import { Courier_Prime, League_Gothic, Newsreader, Schibsted_Grotesk } from "next/font/google";
+import { Barlow_Condensed, Barlow_Semi_Condensed, IBM_Plex_Mono, League_Gothic } from "next/font/google";
 import "./globals.css";
 
-// Case-file type: a news serif for titles, a news grotesk for reading, and a
-// typewriter for coordinates, dates and IDs.
-const display = Newsreader({
-  variable: "--font-newsreader",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-});
-
-const sans = Schibsted_Grotesk({
-  variable: "--font-schibsted",
-  subsets: ["latin"],
-});
-
-// Tall condensed capitals for the name block.
+// One gothic family, from tall to readable: League Gothic for the name, Barlow
+// Condensed for headings, Barlow Semi Condensed for reading, and a sturdy mono
+// for coordinates, dates and labels.
 const masthead = League_Gothic({
   variable: "--font-league",
   subsets: ["latin"],
   axes: ["wdth"],
 });
 
-const mono = Courier_Prime({
-  variable: "--font-courier",
+const display = Barlow_Condensed({
+  variable: "--font-heading",
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["500", "600", "700"],
+  style: ["normal", "italic"],
+});
+
+const sans = Barlow_Semi_Condensed({
+  variable: "--font-body",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+});
+
+const mono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
