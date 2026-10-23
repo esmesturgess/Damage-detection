@@ -1,5 +1,7 @@
 "use client";
 
+import { CHROME } from "@/lib/look";
+
 import { useEffect, useState } from "react";
 import Discussion, { EvidenceComments } from "./Discussion";
 import PriorReports from "./PriorReports";
@@ -134,7 +136,7 @@ export default function SiteOverlay({
       aria-modal="true"
       aria-label={site.name ?? "Site"}
     >
-      <div className="chrome on-paper relative h-full overflow-auto border border-[var(--rule)] shadow-2xl">
+      <div className={`${CHROME} on-paper relative h-full overflow-auto border border-[var(--rule)] shadow-2xl`}>
         {/* Case-file tab strip */}
         <div className="num flex flex-wrap items-stretch border-b-2 border-[var(--rule)] text-[13px] tracking-[0.04em]">
           <span className="bg-[var(--accent)] px-5 py-3 font-bold uppercase text-[var(--paper)]">

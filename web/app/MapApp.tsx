@@ -1,5 +1,7 @@
 "use client";
 
+import { CHROME } from "@/lib/look";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
@@ -18,6 +20,7 @@ import { LEVELS, levelInfo, siteCentre, type Site } from "@/lib/types";
 import AreaLayers, { AREA_LAYERS, type AreaLayerId, type Analysis } from "./AreaLayers";
 import Intro from "./Intro";
 import SiteOverlay from "./SiteOverlay";
+import PlaceSearch from "./PlaceSearch";
 import StartInvestigation from "./StartInvestigation";
 import TimeBar, { label, monthIndex, windows } from "./TimeBar";
 
@@ -381,7 +384,7 @@ export default function MapApp() {
     }
     if (!startMarker.current) {
       const button = document.createElement("button");
-      button.className = "map-cta";
+      button.className = `${CHROME} map-cta`;
       button.addEventListener("click", () => markerAction.current());
       startMarker.current = new Marker({ element: button, anchor: "top", offset: [0, 10] });
     }
@@ -529,15 +532,6 @@ export default function MapApp() {
     goTo(EXAMPLE.lat, EXAMPLE.lon);
   }
 
-  function applyCoordinates() {
-    const [la, lo] = coordText.split(/[\s,]+/).filter(Boolean).map(Number);
-    if (!(Math.abs(la) <= 90 && Math.abs(lo) <= 180)) {
-      setProbeMsg("Type latitude, longitude, e.g. 20.82, 92.38");
-      return;
-    }
-    goTo(la, lo);
-  }
-
   function goTo(la: number, lo: number) {
     const box = boxAround(la, lo, COORD_BOX_KM);
     setAoi(box);
@@ -624,7 +618,7 @@ export default function MapApp() {
       <div ref={container} className="h-full w-full" />
 
       {/* Name block, top left. Room for a logo. */}
-      <div className="chrome on-paper absolute left-4 top-4 flex h-[86px] w-[248px] items-center gap-3 border border-[var(--rule)] px-4">
+      <div className={`${CHROME} on-paper absolute left-4 top-4 flex h-[86px] w-[248px] items-center gap-3 border border-[var(--rule)] px-4`}>
         <h1 className="display flex-1 text-[22px] font-semibold leading-[1.05]">Burn and change detection</h1>
         <button className="link self-start pt-3 text-[12px]" onClick={() => setIntroOpen(true)}>
           Help
@@ -636,34 +630,15 @@ export default function MapApp() {
       </div>
 
       {/* Controls, bottom right: area, layers, key. */}
-      <section className="chrome on-paper absolute bottom-4 right-4 flex max-h-[calc(100%-140px)] w-[300px] flex-col overflow-auto border border-[var(--rule)]">
+      <section className={`${CHROME} on-paper absolute bottom-4 right-4 flex max-h-[calc(100%-140px)] w-[300px] flex-col overflow-auto border border-[var(--rule)]`}>
         <div className="border-b border-[var(--line)] p-3">
-          <div className="flex gap-2">
-            <button
-              className={`btn shrink-0 ${drawing ? "btn-active" : ""}`}
-              onClick={() => setDrawing(!drawing)}
-            >
-              {drawing ? "Cancel" : aoi ? "New box" : "Draw a box"}
-            </button>
-            <form
-              className="flex min-w-0 flex-1 border border-[var(--rule)]"
-              onSubmit={(e) => {
-                e.preventDefault();
-                applyCoordinates();
-              }}
-            >
-              <input
-                className="num min-w-0 flex-1 bg-transparent px-2 text-[13px] outline-none placeholder:text-[var(--muted)]"
-                placeholder="lat, lon"
-                aria-label="Coordinates"
-                value={coordText}
-                onChange={(e) => setCoordText(e.target.value)}
-              />
-              <button className="border-l border-[var(--rule)] px-2.5" aria-label="Go to coordinates">
-                →
-              </button>
-            </form>
-          </div>
+          <PlaceSearch text={coordText} onText={setCoordText} onGo={goTo} />
+          <button
+            className={`btn mt-2 w-full ${drawing ? "btn-active" : ""}`}
+            onClick={() => setDrawing(!drawing)}
+          >
+            {drawing ? "Cancel drawing" : aoi ? "Draw a new box" : "Draw a box"}
+          </button>
           {drawing ? <p className="muted mt-2 text-[12px]">Drag on the map to draw the box. Esc cancels.</p> : null}
           {aoi && !drawing ? (
             <div className="mt-2 flex justify-between text-[12px]">

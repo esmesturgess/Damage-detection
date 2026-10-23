@@ -5,7 +5,7 @@ from typing import Any
 
 import httpx
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -33,6 +33,7 @@ from core.evidence import (
     list_evidence,
     verification,
 )
+from core.places import GazetteerMissing, search_places
 from core.prior_reports import PriorReportsError, add_report_as_evidence, latest_search, search_prior_reports
 from core.pwtt import screen_for_change
 from core.seed import seed_demo, seed_demo_evidence
@@ -264,6 +265,15 @@ class InvestigationIn(BaseModel):
 def get_place_name(lat: float, lon: float, area_km2: float | None = None) -> dict[str, Any]:
     """English and local name of the place at a point (OpenStreetMap)."""
     return place_name(lat, lon, area_km2)
+
+
+@app.get("/places/search")
+def get_place_search(q: str = Query(max_length=200), limit: int = 8) -> dict[str, Any]:
+    """Places whose name, or another spelling of it, is close to q. Searched locally; nothing is sent out."""
+    try:
+        return search_places(q, max(1, min(limit, 20)))
+    except GazetteerMissing as exc:
+        raise HTTPException(503, str(exc)) from exc
 
 
 @app.post("/investigations/overlaps")

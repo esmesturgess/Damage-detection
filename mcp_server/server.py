@@ -15,6 +15,7 @@ from core.bundle import get_evidence_bundle as core_bundle
 from core.burn import classify_burn as core_classify
 from core.coverage import check_coverage as core_coverage
 from core.db import init_db
+from core.places import search_places as core_search_places
 from core.prior_reports import search_prior_reports as core_prior_reports
 from core.pwtt import screen_for_change as core_screen
 from core.seismic import check_seismic_confound as core_seismic
@@ -100,6 +101,21 @@ def search_prior_reports(
     """
     aoi = json.loads(aoi_geojson) if aoi_geojson else None
     return core_prior_reports(site_id, aoi, start_date, end_date, radius_km, searched_by="agent")
+
+
+@mcp.tool()
+def search_places(query: str, limit: int = 8) -> dict[str, Any]:
+    """Places in the local GeoNames gazetteer whose name is close to query, closest spelling first.
+
+    Tolerates typos and Burmese romanisation variants (ky/ch, th/t, d/t,
+    aw/o...), and matches alternate names, including Burmese script and old
+    names (Akyab finds Sittwe). `matched` is the spelling that matched when
+    it is not the main name. Several places can share a name: read admin1
+    and admin2 before choosing one. No result means the gazetteer lacks the
+    name, not that the place does not exist; try other spellings. Searched
+    locally; the query is not sent anywhere.
+    """
+    return core_search_places(query, limit)
 
 
 def main() -> None:
