@@ -690,8 +690,8 @@ export default function MapApp() {
       </div>
 
       {/* Controls, bottom right: area, layers, key. */}
-      <section className={`${CHROME} on-paper absolute bottom-4 right-4 flex max-h-[calc(100%-140px)] w-[330px] flex-col overflow-auto border border-[var(--rule)]`}>
-        <div className="border-b border-[var(--line)] p-3" data-tour="area">
+      <section className={`${CHROME} on-paper absolute bottom-4 right-4 flex max-h-[calc(100%-140px)] w-[380px] flex-col overflow-auto border border-[var(--rule)]`}>
+        <div className="border-b border-[var(--line)] p-4" data-tour="area">
           <PlaceSearch text={coordText} onText={setCoordText} onGo={goTo} near={mapCentre} />
           <button
             className={`btn mt-2 w-full ${drawing ? "btn-active" : ""}`}
@@ -715,7 +715,7 @@ export default function MapApp() {
         </div>
 
         {aoi ? (
-          <div className="border-b border-[var(--line)] p-3" data-tour="layers">
+          <div className="border-b border-[var(--line)] p-4" data-tour="layers">
             <AreaLayers
               analysis={analysis}
               on={layerOn}
@@ -733,7 +733,7 @@ export default function MapApp() {
           </div>
         ) : null}
 
-        <div className="p-3 text-[14px]" data-tour="legend">
+        <div className="p-4 text-[14px]" data-tour="legend">
           <ul className="mb-2 flex flex-wrap gap-x-3.5 gap-y-1">
             {LEVELS.filter((l) => l.id !== "ruled_out" && (l.id !== "disputed" || counts.disputed)).map((l) => (
               <li

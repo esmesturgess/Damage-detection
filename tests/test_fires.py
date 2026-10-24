@@ -72,6 +72,7 @@ def test_detections_are_normalised_filtered_and_sorted():
         "VIIRS_SNPP_SP", "high", "day", "presumed vegetation fire"
     )
     assert second["distance_km"] == 0 and second["frp_mw"] == 12.3
+    assert (first["satellite"], second["satellite"]) == ("Terra", "S-NPP")
 
 
 def test_no_judgement_fields():

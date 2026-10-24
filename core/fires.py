@@ -45,6 +45,8 @@ SENSORS = [
 ]
 # FIRMS attribute tables: VIIRS confidence is l/n/h, MODIS 0-100; type is archive only.
 VIIRS_CONFIDENCE = {"l": "low", "n": "nominal", "h": "high"}
+# FIRMS satellite codes, as readable names.
+SATELLITE = {"N": "S-NPP", "N20": "NOAA-20", "1": "NOAA-20", "N21": "NOAA-21", "T": "Terra", "A": "Aqua"}
 FIRE_TYPE = {
     "0": "presumed vegetation fire",
     "1": "active volcano",
@@ -203,7 +205,7 @@ def _normalise(row: dict[str, str], source: str, geom) -> dict[str, Any]:
     brightness = row.get("bright_ti4") if viirs else row.get("brightness")
     return {
         "source": source,
-        "satellite": row.get("satellite"),
+        "satellite": SATELLITE.get(row.get("satellite") or "", row.get("satellite")),
         "instrument": row.get("instrument") or ("VIIRS" if viirs else "MODIS"),
         "lat": lat,
         "lon": lon,
