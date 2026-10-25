@@ -31,7 +31,10 @@ setWorkerUrl("/maplibre-gl-worker.mjs");
 
 const RAKHINE: [number, number] = [93.8, 20.8];
 const API_DOWN = "API unreachable. Start uvicorn on :8000.";
-const AREA_OPACITY = 0.85;
+// Radar and burn are see-through so the photo and each other show beneath; the photos and the
+// water mask stay solid (a mask hides what's under it). Matches OVERLAY_OPACITY in core/imagery.py.
+const OVERLAY_OPACITY = 0.55;
+const SOLID_LAYERS: AreaLayerId[] = ["before", "after", "water"];
 const TOUR_SEEN = { map: "burn-evidence:intro-seen", site: "corroborator:site-tour-seen" } as const;
 const HANDLE = "burn-evidence:handle";
 const EXAMPLE = { lat: 20.82, lon: 92.38, range: [monthIndex(2017, 7), monthIndex(2017, 8)] as [number, number] };
@@ -470,7 +473,7 @@ export default function MapApp() {
       }
       if (map.getLayer(layerId)) {
         map.setLayoutProperty(layerId, "visibility", layerOn[id] ? "visible" : "none");
-        map.setPaintProperty(layerId, "raster-opacity", id === "water" ? 1 : AREA_OPACITY); // a mask hides what's under it
+        map.setPaintProperty(layerId, "raster-opacity", SOLID_LAYERS.includes(id) ? 1 : OVERLAY_OPACITY);
       }
     }
   }, [analysis, aoi, layerOn, mapReady]);

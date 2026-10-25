@@ -27,7 +27,7 @@ export type Analysis =
   | { status: "ready"; data: AnalysisData };
 
 // Same palettes as CHANGE_VIS and BURN_VIS in core/imagery.py, weak to strong.
-const CHANGE_STEPS = ["#ffff00", "#ff8000", "#ff0000", "#c00040", "#800080"];
+const CHANGE_STEPS = ["#fbc6e2", "#f768a1", "#c51b8a", "#7a0177", "#49006a"];
 const BURN_STEPS = ["#fff7bc", "#fec44f", "#f03b20", "#7f0000"];
 const WATER_STEPS = ["#3b7dd8"];
 
@@ -99,7 +99,7 @@ export default function AreaLayers({
           built-up land the year before. A pixel needs at least 3 images before and 2 during.
         </p>
         <p>
-          Shown from 3 (yellow) to 5 and above (purple). T says how sure the test is that something changed, not how much
+          Shown from 3 (pale pink) to 5 and above (deep violet). T says how sure the test is that something changed, not how much
           changed: in cities with many satellite passes, small everyday changes still reach 3. It flags destruction, but
           also construction, demolition, flooding or crops beside buildings. Use it to find places to look, not as evidence
           of damage.

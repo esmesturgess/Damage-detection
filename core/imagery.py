@@ -28,13 +28,16 @@ S2_BANDS = ["B2", "B3", "B4", "B8", "B11", "B12"]  # widen the after-window when
 
 TRUE_COLOUR = {"bands": ["B4", "B3", "B2"], "min": 0, "max": 2500, "gamma": 1.2}
 # Palettes match the keys in web/app/AreaLayers.tsx.
-CHANGE_VIS = {"min": 3, "max": 5, "palette": ["ffff00", "ff0000", "800080"]}
+# Radar in pink to violet, burn in fire colours, water in blue: three families that stay
+# apart where layers overlap, and orange against violet survives common colour blindness.
+CHANGE_VIS = {"min": 3, "max": 5, "palette": ["fbc6e2", "f768a1", "c51b8a", "7a0177", "49006a"]}
 # USGS dNBR severity classes, shown from "low" upwards.
 BURN_VIS = {"min": 0.1, "max": 0.66, "palette": ["fff7bc", "fec44f", "f03b20", "7f0000"]}
 # Water mask as in the paper: MNDWI (B3 green vs B11 SWIR) above this in both
 # composites. The scan's stable_water_fraction uses the same test.
 WATER_MNDWI = 0.12
 WATER_VIS = {"palette": ["3b7dd8"]}
+OVERLAY_OPACITY = 0.55  # radar and burn over imagery; matches the map (web/app/MapApp.tsx)
 
 _TTL_S = 3600
 _cache: dict[str, tuple[float, dict[str, Any]]] = {}
@@ -64,7 +67,9 @@ def area_thumbnails(
         for name in ("change", "burn"):
             if name in images:
                 base = images.get("after")
-                out[name] = _thumb(base.blend(images[name]) if base is not None else images[name], aoi)
+                # Drawn see-through over the photo, as on the map.
+                layer = images[name].updateMask(images[name].mask().multiply(OVERLAY_OPACITY))
+                out[name] = _thumb(base.blend(layer) if base is not None else images[name], aoi)
         return out
 
     return _cached("thumbs", aoi_geojson, baseline_window, event_window, thumbs, per_image=False)
