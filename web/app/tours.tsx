@@ -43,7 +43,7 @@ export function mapTour(showExample: () => void): TourStep[] {
         <>
           <p>We&apos;ve put an example box on Maungdaw, August–September 2017. Its layers load here:</p>
           <ul className="list-disc space-y-0.5 pl-5">
-            <li>Radar change: Ballinger&apos;s Pixel-Wise T-Test on Sentinel-1</li>
+            <li>Radar change: Ballinger&apos;s Pixel-Wise T-Test on Sentinel-1, orbits combined by direction</li>
             <li>Burn signal: dNBR from Sentinel-2</li>
             <li>Water mask: MNDWI, as in the paper</li>
             <li>Photo: the before or after image</li>

@@ -91,22 +91,23 @@ def _images(aoi: dict[str, Any], baseline: dict[str, str], event: dict[str, str]
     initialize()
     import ee
 
-    from core._vendor import pwtt
+    from core.change import signed_pwtt
 
     region = ee.Geometry(aoi)
     notes: list[str] = []
     images: dict[str, Any] = {}
 
-    # Structural change: Pixel-Wise T-Test on Sentinel-1, built-up areas only.
+    # Structural change: Pixel-Wise T-Test on Sentinel-1, built-up areas only, with the
+    # orbits combined by direction (core/change.py explains why and what it changes).
     ev_start, ev_end = date.fromisoformat(event["start"]), date.fromisoformat(event["end"])
     bl_start = date.fromisoformat(baseline["start"])
-    change = pwtt.detect_damage(
-        aoi=region,
-        war_start=event["start"],
-        inference_start=event["start"],
-        pre_interval=max(1, round((ev_start - bl_start).days / 30.44)),
-        post_interval=max(1, round((ev_end - ev_start).days / 30.44)),
-    ).select("T_statistic")
+    change = signed_pwtt(
+        region,
+        event["start"],
+        event["start"],
+        max(1, round((ev_start - bl_start).days / 30.44)),
+        max(1, round((ev_end - ev_start).days / 30.44)),
+    )
     images["change"] = change.updateMask(change.gte(3)).visualize(**CHANGE_VIS)
 
     # Optical: same product on both sides, L2A preferred (the burn detector's

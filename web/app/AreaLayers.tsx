@@ -85,16 +85,24 @@ export default function AreaLayers({
         </p>
         <p>
           Sentinel-1 radar, both polarisations (VV, VH), speckle-filtered and log-scaled. For each satellite orbit, a
-          Welch t-test compares each pixel&apos;s images in the 12 months before the window with those inside it. Orbits
-          are combined (Stouffer&apos;s method) and the stronger polarisation kept.
+          Welch t-test compares each pixel&apos;s images in the 12 months before the window with those inside it.
+        </p>
+        <p>
+          Our change to the method: orbits are combined with Stouffer&apos;s method keeping the direction of change (brighter
+          or darker), then the stronger polarisation is kept. The published code combines the sizes of change without
+          direction, so random noise adds up wherever several orbits overlap. In Nablus, where nothing happened in
+          August–September 2017, that made 95% of built-up pixels score 3 or more; combining by direction gives 53%,
+          while burned villages in Rakhine are picked out as before.
         </p>
         <p>
           The result is smoothed over 10–150 m, so it is not strictly per pixel, and kept only where Dynamic World mapped
           built-up land the year before. A pixel needs at least 3 images before and 2 during.
         </p>
         <p>
-          Shown from 3 (yellow) to 5 and above (purple): how far the change sits outside the place&apos;s normal
-          variation. It flags destruction, but also construction, demolition, flooding or crops beside buildings.
+          Shown from 3 (yellow) to 5 and above (purple). T says how sure the test is that something changed, not how much
+          changed: in cities with many satellite passes, small everyday changes still reach 3. It flags destruction, but
+          also construction, demolition, flooding or crops beside buildings. Use it to find places to look, not as evidence
+          of damage.
         </p>
       </LayerRow>
       <LayerRow

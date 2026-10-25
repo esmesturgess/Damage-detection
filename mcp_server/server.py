@@ -62,7 +62,12 @@ def screen_for_change(
     event_end: str,
     z_threshold: float = 3.0,
 ) -> dict[str, str]:
-    """PWTT over the AOI. Returns a job id; this takes minutes. Runs anywhere Sentinel-1 reaches."""
+    """PWTT over the AOI, orbits combined by direction. Returns a job id; this takes minutes.
+
+    Hot-spots are pixels with T above z_threshold. T measures how sure the test is that
+    backscatter changed, not how much: in cities with many Sentinel-1 passes, everyday change
+    can pass 3. Treat hot-spots as places to look, not as damage.
+    """
     job_id = core_screen(
         _area(aoi_geojson),
         {"start": baseline_start, "end": baseline_end},

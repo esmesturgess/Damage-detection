@@ -1,7 +1,8 @@
 """Pixel-Wise T-Test change screening (Ballinger).
 
 Each pixel is tested against its own prior Sentinel-1 time series, so no
-regional training is needed. `screen_for_change` queues a job; the worker
+regional training is needed. Orbits are combined by direction (core/change.py),
+a change to the published method that stops noise adding up across orbits. `screen_for_change` queues a job; the worker
 calls `run_scan`, which runs PWTT on Earth Engine, turns flagged pixels into
 hot-spot locations, and computes the burn features around each one.
 """
@@ -96,7 +97,7 @@ def run_scan(job_id: str, params: dict[str, Any]) -> dict[str, Any]:
     initialize()
     import ee
 
-    from core._vendor import pwtt
+    from core.change import signed_pwtt
     from core.imagery import L1C, L2A, clear_scenes, optical_pair, stable_water
     from core.investigations import attach_to_investigations
 
@@ -106,14 +107,14 @@ def run_scan(job_id: str, params: dict[str, Any]) -> dict[str, Any]:
     bl_start = date.fromisoformat(baseline["start"])
     notes: list[str] = []
 
-    change = pwtt.detect_damage(
-        aoi=region,
-        war_start=event["start"],
-        inference_start=event["start"],
-        pre_interval=max(1, round((ev_start - bl_start).days / 30.44)),
-        post_interval=max(1, round((ev_end - ev_start).days / 30.44)),
-        threshold=params["z_threshold"],
+    t_stat = signed_pwtt(
+        region,
+        event["start"],
+        event["start"],
+        max(1, round((ev_start - bl_start).days / 30.44)),
+        max(1, round((ev_end - ev_start).days / 30.44)),
     )
+    change = t_stat.addBands(t_stat.gt(params["z_threshold"]).rename("damage"))
 
     # Flagged pixels -> polygons, with mean and max T per polygon.
     vectors = (
