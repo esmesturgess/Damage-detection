@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const API = process.env.API_URL ?? "http://127.0.0.1:8000";
+// A free API host can take most of a minute to wake from sleep; wait for it rather than fail.
+export const maxDuration = 60;
 
 async function proxy(req: NextRequest, path: string[]) {
   const url = new URL(req.url);
