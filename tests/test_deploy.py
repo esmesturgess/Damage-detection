@@ -50,7 +50,12 @@ def test_health_reports_demo_mode(client, monkeypatch):
 
 
 def test_earth_engine_problems_are_reported_not_hidden(client, monkeypatch):
-    monkeypatch.setattr(config.settings, "enable_live_gee", False)
+    from core.gee import GeeUnavailable
+
+    def refuse(*args):
+        raise GeeUnavailable("Earth Engine login failed for project 'x'.")
+
+    monkeypatch.setattr(main, "check_coverage", refuse)
     box = {"type": "Polygon", "coordinates": [[[92.36, 20.79], [92.37, 20.79], [92.37, 20.80], [92.36, 20.80], [92.36, 20.79]]]}
     res = client.post("/coverage", json={"aoi_geojson": box, "start_date": "2017-08-01", "end_date": "2017-08-10"})
     assert res.status_code == 503 and "Earth Engine" in res.json()["detail"]
