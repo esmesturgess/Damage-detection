@@ -6,12 +6,13 @@ import type { NextRequest } from "next/server";
  * Until there are accounts, this keeps a deployed copy to the people given the password.
  */
 export function proxy(request: NextRequest) {
-  const password = process.env.SITE_PASSWORD;
+  // Spaces pasted round the stored value aren't part of the password.
+  const password = process.env.SITE_PASSWORD?.trim();
   if (!password) return NextResponse.next();
   const header = request.headers.get("authorization") ?? "";
   const [scheme, encoded] = header.split(" ");
   if (scheme === "Basic" && encoded) {
-    const decoded = atob(encoded);
+    const decoded = decodeBasic(encoded);
     const given = decoded.slice(decoded.indexOf(":") + 1);
     if (sameText(given, password)) return NextResponse.next();
   }
@@ -19,6 +20,15 @@ export function proxy(request: NextRequest) {
     status: 401,
     headers: { "WWW-Authenticate": 'Basic realm="Corroborator", charset="UTF-8"' },
   });
+}
+
+/** Base64 "user:password" from the browser, read as UTF-8 so characters like £ or é survive. */
+function decodeBasic(encoded: string): string {
+  try {
+    return new TextDecoder().decode(Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0)));
+  } catch {
+    return "";
+  }
 }
 
 /** Compares without stopping at the first difference, so timing doesn't reveal the password. */
