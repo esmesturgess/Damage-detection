@@ -64,6 +64,12 @@ async def require_shared_secret(request, call_next):
     return await call_next(request)
 
 
+@app.exception_handler(GeeUnavailable)
+async def gee_unavailable(request, exc: GeeUnavailable):
+    """Earth Engine not installed, not configured or refusing login: say which, on every route."""
+    return JSONResponse({"detail": str(exc)}, status_code=503)
+
+
 @app.on_event("startup")
 def startup() -> None:
     init_db()
