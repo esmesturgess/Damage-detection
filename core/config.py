@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     demo_mode: bool = False
     # Earth Engine scans allowed per UTC day across everyone (0 = no limit), to protect the quota.
     max_scans_per_day: int = 0
+    # Run the scan worker as a thread in the API process: one process instead of two on a small host.
+    run_worker_in_api: bool = False
 
 
 settings = Settings()

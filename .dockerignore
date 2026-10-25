@@ -1,0 +1,12 @@
+.git
+.venv
+.env
+*.json.key
+gee-service-account.json
+data/app.db*
+data/gazetteer
+web/node_modules
+web/.next
+evals/layer2/runs
+evals/layer3/runs
+**/__pycache__

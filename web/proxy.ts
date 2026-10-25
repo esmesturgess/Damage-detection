@@ -29,5 +29,6 @@ function sameText(a: string, b: string): boolean {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // /api/health stays open so the host's health check gets through; it reveals nothing.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/health).*)"],
 };

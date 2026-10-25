@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hmac
 import json
+import threading
 from typing import Any
 
 import httpx
@@ -76,6 +77,10 @@ def startup() -> None:
     with session() as conn:
         seed_demo(conn)
         seed_demo_evidence(conn)
+    if settings.run_worker_in_api:
+        from api.worker import loop
+
+        threading.Thread(target=loop, name="scan-worker", daemon=True).start()
 
 
 def require_handle(handle: str | None) -> str:

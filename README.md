@@ -84,12 +84,9 @@ Fire detections come from NASA FIRMS (VIIRS from 2012, MODIS from 2000): set `FI
 
 ## Deploying a demo
 
-API and scan worker in one Docker service (e.g. Render, free tier), website on Vercel (root directory `web`).
+One Docker service runs everything (e.g. Render, free tier): the website on the host's `PORT`, the API on 127.0.0.1 inside the container, and the scan worker as a thread in the API. About 140 MB in use, measured. Health check path: `/api/health`.
 
-- API service: `ENABLE_LIVE_GEE=true`, `GEE_PROJECT`, `GEE_SERVICE_ACCOUNT_JSON` pointing at the key added as a secret file, `FIRMS_MAP_KEY`, `ACLED_SAMPLE=true`, `DEMO_MODE=true` (free disks reset when the service sleeps; the site says so), `MAX_SCANS_PER_DAY` (protects the Earth Engine quota), and `API_SHARED_SECRET`.
-- Website: `API_URL` (the API's address), the same `API_SHARED_SECRET`, and `SITE_PASSWORD` (one shared password for the whole site, until there are accounts).
-
-With `API_SHARED_SECRET` set, the API answers only requests from the website; `/health` stays open for health checks.
+Settings: `ENABLE_LIVE_GEE=true`, `GEE_PROJECT`, `GEE_SERVICE_ACCOUNT_JSON` pointing at a service-account key added as a secret file, `FIRMS_MAP_KEY`, `ACLED_SAMPLE=true`, `DEMO_MODE=true` (free disks reset when the service sleeps; the site says so), `MAX_SCANS_PER_DAY` (protects the Earth Engine quota), `SITE_PASSWORD` (one shared password for the whole site, until there are accounts) and `API_SHARED_SECRET` (any value; the API refuses requests without it).
 
 ## Architecture
 
