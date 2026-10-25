@@ -27,6 +27,20 @@ def claim_next() -> str | None:
         return job_id
 
 
+def requeue_interrupted() -> int:
+    """Put back jobs left 'running' by a worker that stopped mid-scan.
+
+    There is one worker, so anything running when it starts was interrupted;
+    left alone, identical scans would keep reusing a job nobody is running.
+    """
+    with session() as conn:
+        rows = conn.execute("SELECT id FROM jobs WHERE status = 'running'").fetchall()
+        for row in rows:
+            conn.execute("UPDATE jobs SET status = 'queued', updated_at = ? WHERE id = ?", (utcnow(), row["id"]))
+            audit(conn, "worker", "job_requeued", "job", row["id"], {"reason": "worker restarted mid-run"})
+    return len(rows)
+
+
 def run_job(job_id: str) -> None:
     with session() as conn:
         row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
@@ -66,6 +80,7 @@ def loop(poll_seconds: float = 2.0) -> None:
     init_db()
     with session() as conn:
         seed_demo(conn)
+    requeue_interrupted()
     while True:
         job_id = claim_next()
         if job_id:

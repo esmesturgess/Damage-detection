@@ -47,8 +47,8 @@ pip install -e ".[dev]"
 cp .env.example .env
 
 uvicorn api.main:app --reload --port 8000
-# in another shell
-python -m api.worker
+# in another shell: the scan worker, restarted whenever core/ or api/ changes
+watchfiles --filter python "python -m api.worker" core api
 # in another shell
 cd web && npm install && npm run dev
 ```
