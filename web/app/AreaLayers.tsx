@@ -41,7 +41,7 @@ export default function AreaLayers({
   analysis: Analysis;
   on: Record<AreaLayerId, boolean>;
   onToggle: (id: AreaLayerId, value: boolean) => void;
-  tileTrouble: boolean;
+  tileTrouble: false | "rate" | "other";
   onRetry: () => void;
 }) {
   if (analysis.status === "idle" || analysis.status === "loading") {
@@ -175,7 +175,11 @@ export default function AreaLayers({
 
       {tileTrouble ? (
         <div className="flex items-center justify-between gap-2 text-[13.5px] font-semibold">
-          <span>Earth Engine didn&apos;t render some tiles.</span>
+          <span>
+            {tileTrouble === "rate"
+              ? "Earth Engine is limiting this project's requests (over its monthly quota), so some tiles are missing."
+              : "Earth Engine didn't render some tiles."}
+          </span>
           <button className="link shrink-0" onClick={onRetry}>
             Retry
           </button>

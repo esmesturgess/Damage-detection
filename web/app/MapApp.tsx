@@ -10,6 +10,7 @@ import {
   GeoJSONSource,
   Marker,
   RasterTileSource,
+  setMaxParallelImageRequests,
   setWorkerUrl,
   type MapLayerMouseEvent,
   type MapMouseEvent,
@@ -28,6 +29,10 @@ import TimeBar, { label, monthIndex, windows } from "./TimeBar";
 // MapLibre 6 resolves its worker relative to import.meta.url, which breaks once
 // Next bundles it. The predev/prebuild scripts copy the worker into public/.
 setWorkerUrl("/maplibre-gl-worker.mjs");
+// Earth Engine computes each area tile on demand and refuses bursts (HTTP 429), most of all when the
+// project is over its monthly quota. Fewer requests at once means fewer refusals.
+setMaxParallelImageRequests(6);
+const TILE_RETRY_DELAYS_MS = [3_000, 6_000, 12_000, 24_000];
 
 const RAKHINE: [number, number] = [93.8, 20.8];
 const API_DOWN = "API unreachable. Start uvicorn on :8000.";
@@ -135,7 +140,14 @@ export default function MapApp() {
     burn: false,
     change: true,
   });
-  const [tileTrouble, setTileTrouble] = useState(false);
+  // Area tiles Earth Engine didn't render: retried automatically, then reported ("rate" = refused for load).
+  const [tileTrouble, setTileTrouble] = useState<false | "rate" | "other">(false);
+  const tileRetry = useRef<{ tries: number; timer: ReturnType<typeof setTimeout> | null; failed: Set<string>; rate: boolean }>({
+    tries: 0,
+    timer: null,
+    failed: new Set(),
+    rate: false,
+  });
   const shownLayers = useRef<Partial<Record<AreaLayerId, string>>>({});
 
   const selected = sites.find((s) => s.id === selectedId) ?? null;
@@ -293,8 +305,21 @@ export default function MapApp() {
           // surfacing as a page error; area failures get a retry in the Layers panel.
           map.on("error", (e) => {
             const sourceId = (e as { sourceId?: string }).sourceId;
-            if (sourceId?.startsWith("area-")) setTileTrouble(true);
-            else console.warn("Map error:", e.error?.message ?? e);
+            if (!sourceId?.startsWith("area-")) return console.warn("Map error:", e.error?.message ?? e);
+            const retry = tileRetry.current;
+            retry.failed.add(sourceId);
+            if ((e.error as { status?: number } | undefined)?.status === 429) retry.rate = true;
+            if (retry.timer) return; // a retry is already scheduled
+            if (retry.tries >= TILE_RETRY_DELAYS_MS.length) {
+              setTileTrouble(retry.rate ? "rate" : "other");
+              return;
+            }
+            retry.timer = setTimeout(() => {
+              retry.timer = null;
+              retry.tries += 1;
+              reloadTiles([...retry.failed]);
+              retry.failed.clear();
+            }, TILE_RETRY_DELAYS_MS[retry.tries]);
           });
           // Sites usually arrive before the style finishes loading; effects below
           // wait on this so the data and handlers land on layers that exist.
@@ -441,7 +466,7 @@ export default function MapApp() {
         if (cancelled) return;
         if (!res.ok) setAnalysis({ status: "error", error: data.detail ?? "Couldn't load layers." });
         else {
-          setTileTrouble(false);
+          resetTileRetry();
           setAnalysis({ status: "ready", data });
         }
       } catch {
@@ -534,6 +559,22 @@ export default function MapApp() {
   function tourExample() {
     beforeTour.current ??= { range, aoi, coordText };
     showExample();
+  }
+
+  /** Re-request the tiles of these area sources (e.g. "area-change"); tiles that loaded come from cache. */
+  function reloadTiles(sourceIds: string[]) {
+    for (const sourceId of sourceIds) {
+      const src = mapRef.current?.getSource(sourceId) as RasterTileSource | undefined;
+      const url = shownLayers.current[sourceId.replace("area-", "") as AreaLayerId];
+      if (src && url) src.setTiles([url]);
+    }
+  }
+
+  function resetTileRetry() {
+    const retry = tileRetry.current;
+    if (retry.timer) clearTimeout(retry.timer);
+    tileRetry.current = { tries: 0, timer: null, failed: new Set(), rate: false };
+    setTileTrouble(false);
   }
 
   function closeTour() {
@@ -725,12 +766,8 @@ export default function MapApp() {
               onToggle={(id, value) => setLayerOn((prev) => ({ ...prev, [id]: value }))}
               tileTrouble={tileTrouble}
               onRetry={() => {
-                setTileTrouble(false);
-                for (const id of AREA_LAYERS) {
-                  const src = mapRef.current?.getSource(`area-${id}`) as RasterTileSource | undefined;
-                  const url = shownLayers.current[id];
-                  if (src && url) src.setTiles([url]); // re-requests the layer's tiles
-                }
+                resetTileRetry();
+                reloadTiles(AREA_LAYERS.map((id) => `area-${id}`));
               }}
             />
           </div>
