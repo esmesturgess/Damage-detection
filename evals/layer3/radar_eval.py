@@ -8,6 +8,7 @@ LightGBM training. This run keeps windows that end in 2017, the main campaign.
 
 For every village, within BUFFER_M of its point, it records:
   T          PWTT T statistic (Ballinger), 12 months before vs the window: what the app shows now
+  Ts         the same with orbits combined by direction (core/change.py, signed Stouffer)
   d          effect size per orbit, |mean after - mean before| / sd before, orbits averaged:
              change measured against the pixel's own variability; doesn't grow with more passes
   dnbr_seas  dNBR with the before taken from the same months a year earlier (app's new burn layer)
@@ -45,7 +46,7 @@ sys.path.insert(0, str(ROOT))
 BUFFER_M = 250
 QUIET_UNTIL = "2016-10-08"  # last day before the October 2016 operations
 SCALE_M = 20
-CUTS = {"T": [3, 4, 5], "d": [1.0, 1.5, 2.0], "dnbr_seas": [0.1, 0.27], "dnbr_12m": [0.1, 0.27]}
+CUTS = {"T": [3, 4, 5], "Ts": [3, 4, 5], "d": [1.0, 1.5, 2.0], "dnbr_seas": [0.1, 0.27], "dnbr_12m": [0.1, 0.27]}
 
 
 def load_labels(ads: Path) -> list[dict]:
@@ -74,6 +75,7 @@ def measure(window: tuple[str, str], villages: list[dict]) -> list[dict]:
     import ee
 
     from core._vendor import pwtt
+    from core.change import signed_pwtt
     from core.imagery import clear_scenes, optical_pair, pick_product
 
     start, end = window
@@ -86,6 +88,7 @@ def measure(window: tuple[str, str], villages: list[dict]) -> list[dict]:
 
     t = pwtt.detect_damage(aoi=region, war_start=start, inference_start=start, pre_interval=12, post_interval=months)
     layers.append(t.select("T_statistic").rename("T"))
+    layers.append(signed_pwtt(region, start, start, 12, months).rename("Ts"))
 
     s1 = (ee.ImageCollection("COPERNICUS/S1_GRD_FLOAT").filterBounds(region)
           .filter(ee.Filter.eq("instrumentMode", "IW"))
