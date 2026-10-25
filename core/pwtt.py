@@ -97,7 +97,7 @@ def run_scan(job_id: str, params: dict[str, Any]) -> dict[str, Any]:
     import ee
 
     from core._vendor import pwtt
-    from core.imagery import L1C, L2A, clear_scenes, pick_product, stable_water
+    from core.imagery import L1C, L2A, clear_scenes, optical_pair, stable_water
     from core.investigations import attach_to_investigations
 
     aoi, baseline, event = params["aoi"], params["baseline_window"], params["event_window"]
@@ -138,17 +138,12 @@ def run_scan(job_id: str, params: dict[str, Any]) -> dict[str, Any]:
     hotspots = vectors.limit(MAX_HOTSPOTS)
 
     # Burn features from the same Sentinel-2 composites as the map layers.
-    post_end = ev_end
-    optical = pick_product(region, baseline["start"], baseline["end"], event["start"], post_end.isoformat())
-    if optical is None:
-        post_end = ev_end + timedelta(days=POST_EXTENSION_DAYS)
-        optical = pick_product(region, baseline["start"], baseline["end"], event["start"], post_end.isoformat())
-        if optical:
-            notes.append(f"No clear Sentinel-2 scene in the window; burn features use imagery to {post_end}.")
+    optical = optical_pair(region, baseline, event)
     if optical:
-        product = optical[0]
-        pre = clear_scenes(product, region, baseline["start"], baseline["end"]).median()
-        post = clear_scenes(product, region, event["start"], post_end.isoformat()).median()
+        notes.extend(optical["notes"])
+        product, (pre_start, pre_end) = optical["product"], optical["pre"]
+        pre = clear_scenes(product, region, pre_start, pre_end).median()
+        post = clear_scenes(product, region, event["start"], optical["post_end"]).median()
         stack = (
             pre.normalizedDifference(["B8", "B12"]).subtract(post.normalizedDifference(["B8", "B12"])).rename("dnbr")
             .addBands(pre.normalizedDifference(["B11", "B12"]).subtract(post.normalizedDifference(["B11", "B12"])).rename("nbr2c"))
@@ -190,7 +185,8 @@ def run_scan(job_id: str, params: dict[str, Any]) -> dict[str, Any]:
     timestamps = {
         "event_window": [event["start"], event["end"]],
         "baseline_window": [baseline["start"], baseline["end"]],
-        "optical_after_window": [event["start"], post_end.isoformat()] if product else None,
+        "optical_before_window": list(optical["pre"]) if optical else None,
+        "optical_after_window": [event["start"], optical["post_end"]] if optical else None,
     }
 
     created = []

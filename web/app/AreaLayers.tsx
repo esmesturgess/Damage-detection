@@ -110,12 +110,14 @@ export default function AreaLayers({
           second.
         </p>
         <p>
-          Before: the median of cloud-free pixels over the 12 months before the window. After: the median over the window,
-          widened by up to 90 days when no clear scene exists. Clouds are removed with s2cloudless.
+          Before: the median of cloud-free pixels over the same months a year earlier, so seasonal drying isn&apos;t read as
+          burning. If those months have no clear scene, the 12 months before are used instead and the layer says so. After:
+          the median over the window, widened by up to 90 days when no clear scene exists. Clouds are removed with
+          s2cloudless.
         </p>
         <p>
           Shown from 0.1 (pale yellow, low severity) to 0.66 (dark red, high), the USGS severity classes. Harvest, land
-          clearing and seasonal drying also raise it, and a 12-month &ldquo;before&rdquo; mixes seasons. This is the raw
+          clearing and drought also raise it. This is the raw
           index, not the trained burn classifier.
         </p>
       </LayerRow>

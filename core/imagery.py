@@ -111,21 +111,15 @@ def _images(aoi: dict[str, Any], baseline: dict[str, str], event: dict[str, str]
 
     # Optical: same product on both sides, L2A preferred (the burn detector's
     # training data), L1C where Earth Engine's L2A archive has gaps.
-    post_end = ev_end
-    optical = pick_product(region, baseline["start"], baseline["end"], event["start"], post_end.isoformat())
-    if optical is None:
-        post_end = ev_end + timedelta(days=POST_EXTENSION_DAYS)
-        optical = pick_product(region, baseline["start"], baseline["end"], event["start"], post_end.isoformat())
-        if optical:
-            notes.append(f"No clear Sentinel-2 scene in the window; after-imagery extended to {post_end}.")
-
+    optical = optical_pair(region, baseline, event)
     if optical is None:
         notes.append("No clear Sentinel-2 scenes before and after: no true colour or burn layer.")
         optical_info = {"product": None, "provisional": True}
     else:
-        product, pre_n, post_n = optical
-        pre = clear_scenes(product, region, baseline["start"], baseline["end"]).median().clip(region)
-        post = clear_scenes(product, region, event["start"], post_end.isoformat()).median().clip(region)
+        notes.extend(optical["notes"])
+        product, (pre_start, pre_end), post_end = optical["product"], optical["pre"], optical["post_end"]
+        pre = clear_scenes(product, region, pre_start, pre_end).median().clip(region)
+        post = clear_scenes(product, region, event["start"], post_end).median().clip(region)
         images["before"] = pre.visualize(**TRUE_COLOUR)
         images["after"] = post.visualize(**TRUE_COLOUR)
         dnbr = pre.normalizedDifference(["B8", "B12"]).subtract(post.normalizedDifference(["B8", "B12"]))
@@ -134,15 +128,55 @@ def _images(aoi: dict[str, Any], baseline: dict[str, str], event: dict[str, str]
         optical_info = {
             "product": "L2A" if product == L2A else "L1C",
             "provisional": product == L1C,
-            "pre_scenes": pre_n,
-            "post_scenes": post_n,
-            "before_window": {"start": baseline["start"], "end": baseline["end"]},
-            "after_window": {"start": event["start"], "end": post_end.isoformat()},
+            "pre_scenes": optical["pre_n"],
+            "post_scenes": optical["post_n"],
+            "seasonal_baseline": optical["seasonal"],
+            "before_window": {"start": pre_start, "end": pre_end},
+            "after_window": {"start": event["start"], "end": post_end},
         }
         if product == L1C:
             notes.append("Burn layer uses Level-1C (top of atmosphere, no atmospheric correction), so its values are less reliable.")
 
     return {"images": images, "optical": optical_info, "notes": notes}
+
+
+def optical_pair(region, baseline: dict[str, str], event: dict[str, str]) -> dict[str, Any] | None:
+    """Which Sentinel-2 product and windows to compare for burn and water, or None.
+
+    Before is the same months a year earlier when clear scenes exist: comparing a
+    dry-season window with a whole-year median makes vegetation drying look like
+    mild burning (dNBR 0.1-0.27), and the USGS severity classes assume matched
+    seasons. Otherwise it falls back to the 12-month baseline and says so. If the
+    window itself has no clear scene, after is extended by up to 90 days.
+    """
+    ev_start, ev_end = date.fromisoformat(event["start"]), date.fromisoformat(event["end"])
+    year = timedelta(days=365)
+    for post_end in (ev_end, ev_end + timedelta(days=POST_EXTENSION_DAYS)):
+        seasonal = ((ev_start - year).isoformat(), (post_end - year).isoformat())
+        for pre, is_seasonal in ((seasonal, True), ((baseline["start"], baseline["end"]), False)):
+            found = pick_product(region, *pre, event["start"], post_end.isoformat())
+            if not found:
+                continue
+            notes = []
+            if post_end != ev_end:
+                notes.append(f"No clear Sentinel-2 scene in the window; after-imagery extended to {post_end}.")
+            notes.append(
+                "Burn compared with the same months a year earlier."
+                if is_seasonal
+                else "No clear scenes in the same months last year: burn compared with the 12 months before, "
+                "so seasonal drying can show as mild burning."
+            )
+            product, pre_n, post_n = found
+            return {
+                "product": product,
+                "pre": pre,
+                "post_end": post_end.isoformat(),
+                "pre_n": pre_n,
+                "post_n": post_n,
+                "seasonal": is_seasonal,
+                "notes": notes,
+            }
+    return None
 
 
 def stable_water(pre, post):
