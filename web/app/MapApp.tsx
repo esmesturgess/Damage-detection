@@ -666,18 +666,18 @@ export default function MapApp() {
     <div className="relative h-full w-full">
       <div ref={container} className="h-full w-full" />
 
-      {/* Name block, top left. League Gothic capitals stretched to the box: cap height is 0.743em, so 83.4px
-          type gives 62px capitals; textLength makes the word exactly the box's inner width. */}
-      <div className={`${CHROME} on-paper absolute left-4 top-4 flex h-[86px] w-[248px] items-center border border-[var(--rule)] px-[10px]`}>
+      {/* Name block, top left. League Gothic capitals fill the box: cap height is 0.743em, so 99.6px type
+          gives 74px capitals, and its natural width (2.8em) is the 278px inside the padding. */}
+      <div className={`${CHROME} on-paper absolute left-4 top-4 flex h-[100px] w-[300px] items-center border border-[var(--rule)] px-[10px]`}>
         <h1 className="w-full">
-          <svg viewBox="0 0 226 62" className="block w-full" role="img" aria-label="Corroborator">
+          <svg viewBox="0 0 278 74" className="block w-full" role="img" aria-label="Corroborator">
             <text
               x="0"
-              y="62"
-              textLength="226"
+              y="74"
+              textLength="278"
               lengthAdjust="spacingAndGlyphs"
               fill="var(--accent)"
-              style={{ fontFamily: "var(--font-league)", fontSize: 83.4, fontVariationSettings: '"wdth" 75' }}
+              style={{ fontFamily: "var(--font-league)", fontSize: 99.6, fontVariationSettings: '"wdth" 75' }}
             >
               CORROBORATOR
             </text>
@@ -685,12 +685,12 @@ export default function MapApp() {
         </h1>
       </div>
 
-      <div className="pointer-events-none absolute left-[276px] right-4 top-4" data-tour="timebar">
+      <div className="pointer-events-none absolute left-[328px] right-4 top-4" data-tour="timebar">
         <TimeBar start={range[0]} end={range[1]} onChange={(s, e) => setRange([s, e])} />
       </div>
 
       {/* Controls, bottom right: area, layers, key. */}
-      <section className={`${CHROME} on-paper absolute bottom-4 right-4 flex max-h-[calc(100%-140px)] w-[380px] flex-col overflow-auto border border-[var(--rule)]`}>
+      <section className={`${CHROME} on-paper absolute bottom-4 right-4 flex max-h-[calc((100%-154px)/1.1)] w-[400px] flex-col overflow-auto border border-[var(--rule)] font-semibold [zoom:1.1]`}>
         <div className="border-b border-[var(--line)] p-4" data-tour="area">
           <PlaceSearch text={coordText} onText={setCoordText} onGo={goTo} near={mapCentre} />
           <button

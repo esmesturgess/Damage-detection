@@ -68,7 +68,7 @@ export default function TimeBar({
   if (start < 12) notes.push("Baseline starts before Sentinel-1 coverage; fewer prior scenes.");
 
   return (
-    <div className={`${CHROME} on-paper pointer-events-auto flex min-h-[86px] flex-col justify-center border border-[var(--rule)] px-5 pb-2 pt-2.5`}>
+    <div className={`${CHROME} on-paper pointer-events-auto flex min-h-[100px] flex-col justify-center border border-[var(--rule)] px-5 pb-2 pt-2.5`}>
       <div className="mb-1 flex items-baseline justify-between gap-4">
         <span className="display text-[20px] font-semibold">
           {label(start)} <span className="muted font-normal">→</span> {label(end)}
