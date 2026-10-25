@@ -121,6 +121,15 @@ export default function MapApp() {
   const fitOnLoad = useRef<GeoJSON.Polygon | null>(null);
   const [showDetected, setShowDetected] = useState(true);
   const [showRuledOut, setShowRuledOut] = useState(false);
+  const [demo, setDemo] = useState(false);
+
+  // A public demo copy says that its data doesn't last.
+  useEffect(() => {
+    fetch("/api/health")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((h) => setDemo(Boolean(h?.demo_mode)))
+      .catch(() => undefined);
+  }, []);
   const [tour, setTour] = useState<"map" | "site" | null>(null);
   const [startOpen, setStartOpen] = useState(false);
   const [range, setRange] = useState<[number, number]>([monthIndex(2017, 7), monthIndex(2017, 8)]);
@@ -811,6 +820,7 @@ export default function MapApp() {
           <div className="mt-2 flex items-baseline justify-between gap-3 text-[13.5px]">
             <span className="faint">
               {outsideDates ? `${outsideDates} ${outsideDates === 1 ? "site" : "sites"} outside these dates` : null}
+              {demo ? <span className="block">Demo: changes reset after inactivity</span> : null}
             </span>
             <button className="link" onClick={() => setTour(selected ? "site" : "map")} data-tour="help">
               Help

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import json
 from typing import Any
 
@@ -7,6 +8,7 @@ import httpx
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from core.bundle import get_evidence_bundle
@@ -25,7 +27,7 @@ from core.investigations import (
     start_investigation,
 )
 from core.imagery import analysis_layers, area_thumbnails
-from core.db import init_db, row_to_dict, session
+from core.db import init_db, row_to_dict, session, utcnow
 from core.discussion import DiscussionError, add_comment, list_comments
 from core.evidence import (
     EvidenceError,
@@ -49,6 +51,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def require_shared_secret(request, call_next):
+    """With API_SHARED_SECRET set, only the website (which adds it) can use the API. /health stays open."""
+    secret = settings.api_shared_secret.get_secret_value()
+    if secret and request.url.path != "/health":
+        given = request.headers.get("x-api-secret", "")
+        if not hmac.compare_digest(given.encode(), secret.encode()):
+            return JSONResponse({"detail": "Not authorised"}, status_code=401)
+    return await call_next(request)
 
 
 @app.on_event("startup")
@@ -127,6 +140,7 @@ def health() -> dict[str, Any]:
     return {
         "ok": True,
         "live_gee": settings.enable_live_gee,
+        "demo_mode": settings.demo_mode,
     }
 
 
@@ -161,6 +175,13 @@ def imagery_analysis(body: AnalysisIn) -> dict[str, Any]:
 
 @app.post("/jobs")
 def create_job(body: ScreenIn) -> dict[str, str]:
+    if settings.max_scans_per_day:
+        with session() as conn:
+            today = conn.execute(
+                "SELECT COUNT(*) FROM jobs WHERE kind = 'screen_for_change' AND created_at >= ?", (utcnow()[:10],)
+            ).fetchone()[0]
+        if today >= settings.max_scans_per_day:
+            raise HTTPException(429, f"The daily limit of {settings.max_scans_per_day} scans is used up. Try again tomorrow.")
     try:
         job_id = screen_for_change(
             body.aoi_geojson,

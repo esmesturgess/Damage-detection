@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     acled_sample: bool = False
     # NASA FIRMS key for fire detections (free: https://firms.modaps.eosdis.nasa.gov/api/map_key/).
     firms_map_key: SecretStr = SecretStr("")
+    # Deployment. With a secret set, the API answers only requests carrying it (the website adds it).
+    api_shared_secret: SecretStr = SecretStr("")
+    # A public demo whose data resets when the free server sleeps; the site says so.
+    demo_mode: bool = False
+    # Earth Engine scans allowed per UTC day across everyone (0 = no limit), to protect the quota.
+    max_scans_per_day: int = 0
 
 
 settings = Settings()

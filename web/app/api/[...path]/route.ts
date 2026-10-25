@@ -6,6 +6,8 @@ async function proxy(req: NextRequest, path: string[]) {
   const url = new URL(req.url);
   const target = `${API}/${path.join("/")}${url.search}`;
   const headers = new Headers();
+  // The API only answers requests carrying this secret, so it can't be used directly, around the site password.
+  if (process.env.API_SHARED_SECRET) headers.set("x-api-secret", process.env.API_SHARED_SECRET);
   if (req.headers.get("content-type")) {
     headers.set("content-type", req.headers.get("content-type")!);
   }
