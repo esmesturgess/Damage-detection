@@ -61,8 +61,8 @@ export function mapTour(showExample: () => void, demo = false): TourStep[] {
       body: (
         <>
           <p>
-            Runs the radar test across the box. Each patch of strong change covering at least 2,000 m² (0.2 hectares) becomes
-            a dot on the map, up to the 50 largest.
+            Runs the radar test across the box and puts the areas of strongest change on the map as dots, for people to look
+            into.
           </p>
           <p>
             Once the box is scanned for these dates, the button under the box becomes Start an investigation: a shared case
