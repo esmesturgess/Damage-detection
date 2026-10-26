@@ -23,12 +23,7 @@ export function mapTour(showExample: () => void, demo = false): TourStep[] {
     {
       target: "timebar",
       title: "Choose when",
-      body: (
-        <>
-          <p>Drag the two handles to the period you&apos;re investigating. Imagery and scans compare it with the 12 months before.</p>
-          <p>The map only shows sites from these dates. The striped stretch at the start has radar only, no optical imagery.</p>
-        </>
-      ),
+      body: <p>Drag the two handles to the period you&apos;re investigating.</p>,
     },
     {
       target: "area",
@@ -49,8 +44,11 @@ export function mapTour(showExample: () => void, demo = false): TourStep[] {
           <p>We&apos;ve put an example box on Maungdaw, August–September 2017. Its layers load here:</p>
           <ul className="list-disc space-y-0.5 pl-5">
             <li>Radar change: Ballinger&apos;s Pixel-Wise T-Test on Sentinel-1, orbits combined by direction</li>
-            <li>Burn signal: dNBR from Sentinel-2</li>
-            <li>Water mask: MNDWI, as in the paper</li>
+            <li>
+              Burn signal: the difference in Normalised Burn Ratio, from Sentinel-2. It will soon become a more accurate
+              measurement, with many factors processed through LightGBM.
+            </li>
+            <li>Water mask: the Modified Normalised Difference Water Index, from Sentinel-2</li>
             <li>Photo: the before or after image</li>
           </ul>
           <p>Each layer has How it&apos;s calculated.</p>
@@ -219,11 +217,6 @@ function siteSteps(kind: string): TourStep[] {
       target: "history",
       title: "History",
       body: <p>Every check, verdict, search and comment on this {kind}, with who did it and when.</p>,
-    },
-    {
-      target: "tour-help",
-      title: "That's the page",
-      body: <p>Tour replays this guide.</p>,
     },
   ];
 }
