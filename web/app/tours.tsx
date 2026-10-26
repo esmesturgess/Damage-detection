@@ -8,8 +8,8 @@ export function mapTour(showExample: () => void, demo = false): TourStep[] {
       body: (
         <>
           <p>
-            A shared workspace for finding burned and destroyed settlements in satellite imagery, then building the
-            evidence for what happened.
+            A shared workspace for finding burned and destroyed settlements through satellite imagery, providing a space to
+            compile evidence.
           </p>
           {demo ? (
             <p className="font-semibold">
@@ -31,7 +31,7 @@ export function mapTour(showExample: () => void, demo = false): TourStep[] {
       body: (
         <p>
           Search a place by name (it copes with small spelling slips and favours places near where the map is looking), type
-          coordinates as lat, lon, or press Draw a box and drag on the map. Esc cancels drawing.
+          coordinates as latitude, longitude, or press Draw a box and drag on the map. Esc cancels drawing.
         </p>
       ),
     },
@@ -61,8 +61,8 @@ export function mapTour(showExample: () => void, demo = false): TourStep[] {
       body: (
         <>
           <p>
-            Runs the radar test across the box. Each patch of strong change bigger than a few buildings becomes a dot on the
-            map, up to the 50 largest.
+            Runs the radar test across the box. Each patch of strong change covering at least 2,000 m² (0.2 hectares) becomes
+            a dot on the map, up to the 50 largest.
           </p>
           <p>
             Once the box is scanned for these dates, the button under the box becomes Start an investigation: a shared case

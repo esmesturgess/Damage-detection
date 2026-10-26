@@ -75,7 +75,7 @@ export default function PlaceSearch({
       >
         <input
           className="min-w-0 flex-1 bg-transparent px-2 py-1.5 text-[14px] outline-none placeholder:text-[var(--muted)]"
-          placeholder="Search a place, or lat, lon"
+          placeholder="Search a place, or latitude, longitude"
           aria-label="Search a place or enter coordinates"
           value={text}
           onChange={(e) => {
