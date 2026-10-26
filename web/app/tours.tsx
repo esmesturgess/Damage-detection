@@ -202,8 +202,7 @@ function siteSteps(kind: string): TourStep[] {
       title: "Earthquakes",
       body: (
         <p>
-          Checks USGS for damaging earthquakes near here in the window, a common non-hostile cause of radar change. It
-          isn&apos;t run on sites the burn classifier marked burn-positive.
+          Checks USGS for damaging earthquakes near here in the window, a common non-hostile cause of radar change.
         </p>
       ),
     },

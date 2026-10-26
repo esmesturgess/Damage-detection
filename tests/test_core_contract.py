@@ -11,10 +11,11 @@ def test_core_does_not_import_web_frameworks():
     assert "fastapi" not in inspect.getsource(seismic)
 
 
-def test_seismic_skips_burn_positive(tmp_path, monkeypatch):
+def test_seismic_runs_on_burn_positive_sites_too(tmp_path, monkeypatch):
     from core import config
     from core.db import connect, init_db
     from core.seed import seed_demo
+    from core import seismic
     from core.seismic import check_seismic_confound
 
     config.settings.database_path = tmp_path / "t.db"
@@ -27,9 +28,9 @@ def test_seismic_skips_burn_positive(tmp_path, monkeypatch):
     ).fetchone()["id"]
     conn.close()
 
+    monkeypatch.setattr(seismic, "_query_fdsn", lambda lat, lon, start, end: [])
     out = check_seismic_confound([burn_id])
-    assert out[0]["consulted"] is False
-    assert out[0]["reason"] == "burn_positive"
+    assert out[0]["consulted"] is True and out[0]["flag"] == "unexplained_change"
 
 
 def test_seismic_searches_event_window_not_created_at(tmp_path, monkeypatch):

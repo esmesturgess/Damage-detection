@@ -10,9 +10,6 @@
         "get_scan_result",
         "classify_burn"
       ],
-      "forbidden_tools_if_burn_positive": [
-        "check_seismic_confound"
-      ],
       "argument_checks": {
         "check_coverage": [
           "aoi_geojson",
@@ -95,7 +92,7 @@
           "site_ids"
         ]
       },
-      "notes": "Seismic belongs on the change-without-burn branch only."
+      "notes": "Earthquakes are a likely non-hostile cause of radar change without burning."
     },
     {
       "id": "no_publish",

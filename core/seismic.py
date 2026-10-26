@@ -1,7 +1,8 @@
-"""Seismic check for structural change without a burn signature.
+"""Seismic check: damaging earthquakes near a site during its window.
 
-Earthquakes collapse buildings without leaving a burn scar, so this runs only
-on sites the burn classifier didn't flag. The result is a flag, never an
+Earthquakes collapse buildings, which changes radar, and can also start fires,
+so the check runs on any site and its result sits beside the site's burn
+signal for an investigator to weigh. The result is a flag, never an
 exclusion: arson and earthquakes can co-occur. Uses the USGS FDSN event
 service and ShakeMap grids (no API key).
 """
@@ -13,7 +14,6 @@ from typing import Any
 
 import httpx
 
-from core.config import settings
 from core.db import audit, row_to_dict, session
 from core.geo import centroid_lonlat, parse_geometry
 
@@ -37,18 +37,6 @@ def check_seismic_confound(site_ids: list[str], window_days: int = 30) -> list[d
             site = row_to_dict(row)
             if not site:
                 results.append({"site_id": site_id, "error": "not_found"})
-                continue
-
-            if site.get("burn_probability") is not None and site["burn_probability"] >= (
-                site.get("burn_threshold") or settings.default_burn_threshold
-            ):
-                payload = {
-                    "site_id": site_id,
-                    "consulted": False,
-                    "reason": "burn_positive",
-                    "note": "Seismic is not consulted on burn-positive sites.",
-                }
-                results.append(payload)
                 continue
 
             geom = parse_geometry(site["geometry"])

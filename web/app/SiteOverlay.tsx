@@ -642,7 +642,7 @@ function SatelliteReading({ site }: { site: Site }) {
   );
 }
 
-/** USGS earthquakes near the site in its window. Not run on burn-positive sites, so shaking can't explain burning away. */
+/** USGS earthquakes near the site in its window, shown beside its other readings. */
 function EarthquakeCheck({ site, onChanged }: { site: Site; onChanged: () => void }) {
   const seismic = site.seismic as {
     flag?: string;
@@ -683,8 +683,7 @@ function EarthquakeCheck({ site, onChanged }: { site: Site; onChanged: () => voi
             });
             const [result] = res.ok ? await res.json() : [{ note: "Couldn't reach USGS. Try again." }];
             setBusy(false);
-            if (result?.consulted === false) setNote("Not checked: the burn classifier marked this site burn-positive.");
-            else if (result?.note && !result.consulted) setNote(result.note);
+            if (result?.note && !result.consulted) setNote(result.note);
             onChanged();
           }}
         >

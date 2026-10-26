@@ -32,10 +32,8 @@ def test_fixtures_only_expect_real_tools():
             assert name in TOOLS, fx["id"]
 
 
-def test_maungdaw_does_not_require_seismic_on_burn():
-    fx = fixture("maungdaw_2017")
-    assert "check_seismic_confound" not in fx["expected_tools"]
-    assert "check_seismic_confound" in fx["forbidden_tools_if_burn_positive"]
+def test_maungdaw_does_not_require_seismic():
+    assert "check_seismic_confound" not in fixture("maungdaw_2017")["expected_tools"]
 
 
 AOI = '{"type": "Polygon"}'
@@ -58,11 +56,13 @@ def test_wrong_order_fails():
     assert not result["passed"] and not next(c for c in result["checks"] if c["check"] == "order")["ok"]
 
 
-def test_seismic_on_burn_positive_site_fails_but_not_on_negative():
+def test_scorer_can_forbid_a_tool_on_burn_positive_sites():
+    # No fixture uses this now (the earthquake check runs on any site), but the scorer still supports it.
+    fx = {**fixture("maungdaw_2017"), "forbidden_tools_if_burn_positive": ["check_seismic_confound"]}
     on_positive = calls(*GOOD, ("check_seismic_confound", {"site_ids": ["s1"]}, "[]"))
     on_negative = calls(*GOOD, ("check_seismic_confound", {"site_ids": ["s2"]}, "[]"))
-    assert not score(fixture("maungdaw_2017"), on_positive)["passed"]
-    assert score(fixture("maungdaw_2017"), on_negative)["passed"]
+    assert not score(fx, on_positive)["passed"]
+    assert score(fx, on_negative)["passed"]
 
 
 def test_missing_argument_fails():

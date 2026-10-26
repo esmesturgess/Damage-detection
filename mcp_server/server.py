@@ -30,8 +30,8 @@ investigators. No tool here can publish, verify or change a site's level.
 
 Usual order for an area and dates: check_coverage, then screen_for_change,
 then get_scan_result (scans take minutes), then classify_burn on the site
-ids it returns. check_seismic_confound belongs only to sites that changed
-on radar but are not burn-positive. search_prior_reports finds documented
+ids it returns. check_seismic_confound looks for damaging earthquakes near a
+site in its window, on any site. search_prior_reports finds documented
 incidents (ACLED) near a site or area; search_fire_detections finds NASA
 FIRMS active-fire detections; get_evidence_bundle gives one site's full
 satellite record."""
@@ -95,7 +95,11 @@ def classify_burn(site_ids: list[str], threshold: float | None = None) -> list[d
 
 @mcp.tool()
 def check_seismic_confound(site_ids: list[str], window_days: int = 30) -> list[dict[str, Any]]:
-    """Only meaningful on change-without-burn sites. USGS FDSN plus ShakeMap MMI sampling."""
+    """Damaging earthquakes near each site during its window: USGS FDSN events plus ShakeMap MMI at the site.
+
+    Runs on any site. A flag is context for the investigator, never a reason to rule a site out:
+    earthquakes and burning can happen together.
+    """
     return core_seismic(site_ids, window_days)
 
 

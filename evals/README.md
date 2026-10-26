@@ -8,7 +8,7 @@ Regression tests for the burn classifier. They skip until a model file is presen
 
 ## Layer 2: tool-call correctness
 
-Fixture questions in `layer2/tool_sequences.json`, each with the MCP tools an agent should call (in order, or in any order), tools it must not call, and arguments each call must carry. For example, "Was there burning near Maungdaw in September 2017?" should call `check_coverage` → `screen_for_change` → `get_scan_result` → `classify_burn`, and must not call `check_seismic_confound` on a site the classifier found burn-positive.
+Fixture questions in `layer2/tool_sequences.json`, each with the MCP tools an agent should call (in order, or in any order), tools it must not call, and arguments each call must carry. For example, "Was there burning near Maungdaw in September 2017?" should call `check_coverage` → `screen_for_change` → `get_scan_result` → `classify_burn`.
 
 `layer2/run_agent.py` puts each question to an agent (Claude Code, non-interactive, with only this MCP server and no shell, file or web tools), records every tool call and result, and scores them with `layer2/scoring.py`:
 
