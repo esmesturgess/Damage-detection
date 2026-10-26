@@ -140,22 +140,10 @@ function siteSteps(kind: string): TourStep[] {
       body: (
         <>
           <p>
-            Incidents other people have already documented here. This searches ACLED, the Armed Conflict Location &amp; Event
-            Data project, which records political violence and protest worldwide from news, local partners and other
-            sources.
+            Incidents already documented near here, from ACLED, which records political violence and protest worldwide.
+            Search looks a month either side of these dates.
           </p>
-          <p>
-            Pick a radius and press Search ACLED. It looks a month either side of these dates, because ACLED sometimes only
-            knows the week or month.
-          </p>
-          <p>
-            Each record shows the date, place and distance, the event type, ACLED&apos;s notes, sources, actors and fatalities,
-            and how exact ACLED says the place and date are.
-          </p>
-          <p>
-            Add as evidence copies a record into Evidence, where a colleague checks it like any other item. Every search is
-            kept in History. Until there&apos;s ACLED API access, results are labelled sample records.
-          </p>
+          <p>Add as evidence copies a record into Evidence. Until there&apos;s ACLED API access, results are labelled samples.</p>
         </>
       ),
     },
@@ -168,27 +156,14 @@ function siteSteps(kind: string): TourStep[] {
             NASA FIRMS records every satellite pixel that was unusually hot when a satellite passed: VIIRS at 375 m since
             2012, MODIS at 1 km since 2000. Search shows the detections near here during these dates.
           </p>
-          <p>
-            Each row gives the time (UTC), distance, sensor, the sensor&apos;s own confidence and fire radiative power (FRP).
-            A detection doesn&apos;t say what burned: crop and forest fires look the same as burning houses. Cloud, smoke and
-            the gaps between passes can hide fires, so none found isn&apos;t proof of none.
-          </p>
+          <p>Each row gives the time (UTC), distance, sensor, the sensor&apos;s own confidence and fire radiative power (FRP).</p>
         </>
       ),
     },
     {
       target: "evidence",
       title: "Evidence",
-      body: (
-        <>
-          <p>Add links, posts, videos or testimony.</p>
-          <p>
-            A colleague who didn&apos;t submit an item checks whether it&apos;s located, dated and original, and whether it shares
-            a source with other items. Two independent checked sources, signed off by someone who checked neither, make it
-            Verified.
-          </p>
-        </>
-      ),
+      body: <p>Add links, posts, videos or testimony. Colleagues check each item.</p>,
     },
     {
       target: "discussion",
@@ -237,8 +212,7 @@ function siteSteps(kind: string): TourStep[] {
       title: "Your verdict",
       body: (
         <p>
-          Sign off as verified, mark it disputed, or rule it out as a non-hostile cause or a false detection. A sign-off only
-          counts with two independent sources, and only from someone who checked none of them.
+          Sign off as verified, mark it disputed, or rule it out as a non-hostile cause or a false detection.
         </p>
       ),
     },
