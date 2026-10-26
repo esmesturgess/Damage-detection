@@ -5,8 +5,9 @@ time it is read. Nothing stores it, so nothing can set it directly:
 
   detected      satellite signal only
   corroborated  >=1 item a colleague has located AND dated
-  verified      >=2 independent corroborating sources, plus a `confirm`
-                verdict from a colleague who checked none of them
+  verified      a `confirm` verdict from a colleague, with at least one
+                corroborating source. Provisional: the standard is still to be
+                decided with OSINT practitioners.
   disputed      verdict: credible evidence on both sides
   ruled_out     verdict: non-hostile cause (crop burn, earthquake...) or a
                 false detection. Closed; the reason says which.
@@ -188,7 +189,6 @@ def verification(conn: sqlite3.Connection, site_id: str) -> dict[str, Any]:
     latest = _latest_checks(conn, site_id)
     corroborating = [eid for eid, c in latest.items() if c["located"] == "yes" and c["dated"] == "yes"]
     sources = _independent_groups(corroborating, latest)
-    checkers = {latest[eid]["reviewer"] for eid in corroborating}
 
     evidence_count = conn.execute("SELECT COUNT(*) FROM evidence WHERE site_id = ?", (site_id,)).fetchone()[0]
     stances = {
@@ -213,14 +213,10 @@ def verification(conn: sqlite3.Connection, site_id: str) -> dict[str, Any]:
         )
     elif last == "disputed":
         level, why = "disputed", f"{verdict['analyst']} found credible evidence on both sides."
-    elif len(sources) >= 2 and last == "confirm" and verdict["analyst"] not in checkers:
-        level, why = "verified", f"{len(sources)} independent sources, signed off by a colleague who checked none of them."
+    elif sources and last == "confirm":
+        level, why = "verified", f"Signed off by {verdict['analyst']}, with {_sources(len(sources))}."
     elif sources:
-        level = "corroborated"
-        if len(sources) >= 2:
-            why = f"{len(sources)} independent sources; awaiting sign-off from a colleague who checked none of them."
-        else:
-            why = "1 source located and dated; Verified needs a second independent source."
+        level, why = "corroborated", f"{_sources(len(sources)).capitalize()}; awaiting a colleague's sign-off."
     else:
         level = "detected"
         why = (
@@ -256,6 +252,10 @@ def _latest_checks(conn: sqlite3.Connection, site_id: str) -> dict[str, dict[str
     for row in rows:
         latest[row["evidence_id"]] = row_to_dict(row)  # later checks replace earlier ones
     return latest
+
+
+def _sources(n: int) -> str:
+    return f"{n} checked source{'' if n == 1 else 's'}"
 
 
 def _independent_groups(items: list[str], latest: dict[str, dict[str, Any]]) -> list[set[str]]:

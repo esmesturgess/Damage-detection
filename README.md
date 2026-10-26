@@ -26,7 +26,7 @@ Locations on the map are synthetic demo data, labelled as such.
 |---|---|
 | Detected | Satellite signal only. Hidden from the public map by default |
 | Corroborated | At least one evidence item located and dated by a reviewer |
-| Verified | Two or more independent sources, signed off by a second reviewer who checked none of them |
+| Verified | Signed off by a colleague, with at least one checked source. Provisional: the benchmark is still to be decided with OSINT practitioners |
 | Disputed | Credible evidence on both sides |
 | Ruled out | A non-hostile cause (crop burning, earthquake, construction) or a false detection. Hidden from the map by default |
 

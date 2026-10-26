@@ -53,22 +53,18 @@ def test_one_located_and_dated_item_corroborates(site_id):
 def test_reposts_of_one_source_count_once(site_id):
     first = _corroborate(site_id, "https://example.org/original")
     _corroborate(site_id, "https://example.org/repost", shares=[first])
-    set_verdict(site_id, "confirm", "rev-2")
     v = verification_for(site_id)
     assert v["independent_sources"] == 1
     assert v["level"] == "corroborated"
 
 
-def test_verified_needs_two_sources_and_an_independent_reviewer(site_id):
+def test_verified_is_a_sign_off_with_a_checked_source(site_id):
+    # Provisional standard, pending advice from OSINT practitioners.
     _corroborate(site_id, "https://example.org/a")
-    _corroborate(site_id, "https://example.org/b")
     assert verification_for(site_id)["level"] == "corroborated"
-
-    set_verdict(site_id, "confirm", "rev-1")  # checked the items: can't also sign off
-    assert verification_for(site_id)["level"] == "corroborated"
-
     set_verdict(site_id, "confirm", "rev-2")
-    assert verification_for(site_id)["level"] == "verified"
+    v = verification_for(site_id)
+    assert v["level"] == "verified" and "rev-2" in v["why"]
 
 
 def test_confirm_without_evidence_does_nothing(site_id):

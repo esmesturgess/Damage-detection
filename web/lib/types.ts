@@ -149,7 +149,7 @@ const BRICK = "#a8442f";
 export type LevelStyle = { id: Level; label: string; note: string; fill: string; stroke: string; strokeWidth: number; radius: number; line: string };
 
 export const LEVELS: LevelStyle[] = [
-  { id: "verified", label: "Verified", note: "2+ independent sources, signed off by a colleague who checked none of them", fill: BRICK, stroke: PAPER, strokeWidth: 2.5, radius: 8, line: "#c4563c" },
+  { id: "verified", label: "Verified", note: "signed off by a colleague, with at least one checked source (provisional standard)", fill: BRICK, stroke: PAPER, strokeWidth: 2.5, radius: 8, line: "#c4563c" },
   { id: "corroborated", label: "Corroborated", note: "evidence located and dated by a colleague", fill: "rgba(168,68,47,0.5)", stroke: PAPER, strokeWidth: 1.5, radius: 7, line: PAPER },
   { id: "disputed", label: "Disputed", note: "credible evidence on both sides", fill: PAPER, stroke: BRICK, strokeWidth: 2.5, radius: 7, line: "#c4563c" },
   { id: "detected", label: "Detected", note: "satellite signal only, not yet looked at", fill: "rgba(0,0,0,0)", stroke: PAPER, strokeWidth: 1.5, radius: 5, line: "#d8d2b8" },

@@ -128,7 +128,9 @@ export default function SiteOverlay({
           : "false detection"
         : v.level === "disputed"
           ? "evidence on both sides"
-        : `${v.independent_sources} of 2 independent sources`;
+        : v.independent_sources
+          ? `${v.independent_sources} checked source${v.independent_sources === 1 ? "" : "s"}`
+          : "no checked sources yet";
   const needHandle = () => setMsg("Pick a handle first (any name). You can set it in the discussion box.");
 
   return (
@@ -332,6 +334,10 @@ export default function SiteOverlay({
                 })}
               </div>
               <p className="mt-3 leading-snug">{v.why}</p>
+              <p className="muted mt-3 text-[13.5px] leading-snug">
+                Provisional standard: Verified means a colleague signed it off, with at least one checked source. The
+                benchmark for verification is still to be decided with OSINT practitioners.
+              </p>
             </section>
 
             {isInvestigation ? null : <SatelliteReading site={site} />}
