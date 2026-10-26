@@ -111,3 +111,25 @@ def test_window_limits():
         search_fire_detections(aoi=BOX, start_date="2016-01-01", end_date="2017-09-15", client=fake_firms())
     with pytest.raises(FiresError, match="before"):
         search_fire_detections(aoi=BOX, start_date="2017-09-15", end_date="2017-08-25", client=fake_firms())
+
+
+def test_network_errors_are_retried_then_reported(monkeypatch):
+    monkeypatch.setattr(fires, "RETRY_DELAYS_S", (0, 0))
+    calls = {"n": 0}
+
+    def flaky(request):
+        calls["n"] += 1
+        if calls["n"] <= 2:
+            raise httpx.ConnectTimeout("timed out")
+        return httpx.Response(200, text=VIIRS_HEADER + "\n")
+
+    client = httpx.Client(transport=httpx.MockTransport(flaky))
+    out = search_fire_detections(aoi=BOX, start_date="2017-08-25", end_date="2017-08-26", client=client)
+    assert out["count"] == 0  # two failures, then success on the third try for the first request
+
+    def down(request):
+        raise httpx.ConnectError("refused")
+
+    with pytest.raises(FiresError, match=r"unreachable from the server \(ConnectError: refused\)") as err:
+        search_fire_detections(aoi=BOX, start_date="2017-08-25", end_date="2017-08-26", client=httpx.Client(transport=httpx.MockTransport(down)))
+    assert "TESTKEY" not in str(err.value)

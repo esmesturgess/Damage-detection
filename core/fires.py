@@ -17,6 +17,8 @@ from __future__ import annotations
 import csv
 import io
 import json
+import logging
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 from typing import Any
@@ -34,6 +36,9 @@ DAYS_PER_CALL = 5  # FIRMS's maximum
 MAX_WINDOW_DAYS = 366
 MAX_DETECTIONS = 5_000  # beyond this the result is marked truncated, never silently cut
 DEFAULT_RADIUS_KM = 2.0
+WORKERS = 3  # requests at once; FIRMS drops bursts
+RETRY_DELAYS_S = (2, 5)  # after a network error or timeout
+log = logging.getLogger(__name__)
 # Standard-processing (archive) data lags; newer days come from the near-real-time feed.
 NRT_DAYS = 90
 
@@ -99,7 +104,7 @@ def search_fire_detections(
     own = client is None
     client = client or httpx.Client(timeout=60.0)
     try:
-        with ThreadPoolExecutor(max_workers=4) as pool:
+        with ThreadPoolExecutor(max_workers=WORKERS) as pool:
             batches = list(pool.map(lambda c: _fetch(client, key, c[0], area, c[1], c[2]), calls))
     finally:
         if own:
@@ -182,10 +187,17 @@ def _plan(start: date, end: date) -> list[tuple[str, date, int]]:
 
 def _fetch(client: httpx.Client, key: str, source: str, area: str, day: date, days: int) -> tuple[str, list[dict]]:
     url = AREA_URL.format(key=key, source=source, area=area, days=days, day=day.isoformat())
-    try:
-        res = client.get(url)
-    except httpx.HTTPError as exc:
-        raise FiresError("NASA FIRMS is unreachable right now. Try again shortly.") from exc
+    for attempt in range(len(RETRY_DELAYS_S) + 1):
+        try:
+            res = client.get(url)
+            break
+        except httpx.HTTPError as exc:
+            if attempt == len(RETRY_DELAYS_S):
+                # The key is in the URL, so log and report the error type and message only.
+                reason = f"{type(exc).__name__}: {str(exc).replace(key, '***')[:120]}"
+                log.warning("FIRMS request failed after retries (%s, %s, %s): %s", source, day, days, reason)
+                raise FiresError(f"NASA FIRMS is unreachable from the server ({reason}). Try again shortly.") from exc
+            time.sleep(RETRY_DELAYS_S[attempt])
     text = res.text.strip()
     # FIRMS answers problems in plain text ("Invalid MAP_KEY.") rather than with a CSV.
     if res.status_code != 200 or not text.startswith("latitude"):
