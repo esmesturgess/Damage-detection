@@ -11,7 +11,7 @@ import { levelInfo, siteCentre, type Comment, type Evidence, type EvidenceCheck,
 const LADDER = ["detected", "corroborated", "verified"] as const;
 
 const FEATURE_LABELS: Record<string, string> = {
-  hotspot_area_ha: "Hot-spot area (ha)",
+  hotspot_area_ha: "Hot-spot area (hectares)",
   max_t: "Peak radar change (T)",
   mean_dnbr: "Burn signal, average",
   p95_dnbr: "Burn signal, strongest 5%",
@@ -567,8 +567,8 @@ function HotspotList({ hotspots, onOpen }: { hotspots: Site[]; onOpen: (id: stri
                     <span className="muted"> · {levelInfo(h.verification.level).label.toLowerCase()}</span>
                   </span>
                   <span className="muted num text-[13.5px]">
-                    {feat.hotspot_area_ha != null ? `${Number(feat.hotspot_area_ha).toFixed(1)} ha` : ""}
-                    {feat.p95_dnbr != null ? ` · burn ${Number(feat.p95_dnbr).toFixed(2)}` : ""}
+                    {feat.hotspot_area_ha != null ? `${Number(feat.hotspot_area_ha).toFixed(1)} hectares` : ""}
+                    {feat.p95_dnbr != null ? ` · burn signal ${Number(feat.p95_dnbr).toFixed(2)}` : ""}
                   </span>
                   <span className="muted">→</span>
                 </button>
