@@ -331,3 +331,8 @@ button:disabled {
   background: var(--paper);
   color: var(--foreground);
 }
+
+/* Date pickers on the dark chrome: light calendar icons. */
+.chrome.chrome-black input[type="date"] {
+  color-scheme: dark;
+}

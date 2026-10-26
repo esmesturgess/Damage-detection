@@ -24,7 +24,7 @@ import PlaceSearch from "./PlaceSearch";
 import StartInvestigation from "./StartInvestigation";
 import Tour from "./Tour";
 import { mapTour, siteTour } from "./tours";
-import TimeBar, { label, monthIndex, windows } from "./TimeBar";
+import TimeBar, { label, monthIndex, windows, dayLabel, exactWindows, monthOf, type ExactDates } from "./TimeBar";
 
 // MapLibre 6 resolves its worker relative to import.meta.url, which breaks once
 // Next bundles it. The predev/prebuild scripts copy the worker into public/.
@@ -133,6 +133,8 @@ export default function MapApp() {
   const [tour, setTour] = useState<"map" | "site" | null>(null);
   const [startOpen, setStartOpen] = useState(false);
   const [range, setRange] = useState<[number, number]>([monthIndex(2017, 7), monthIndex(2017, 8)]);
+  // Exact days typed into the time bar; dragging the handles goes back to whole months.
+  const [exact, setExact] = useState<ExactDates | null>(null);
   const [coordText, setCoordText] = useState("");
   const [drawing, setDrawing] = useState(false);
   const drawStart = useRef<[number, number] | null>(null);
@@ -160,7 +162,7 @@ export default function MapApp() {
   const shownLayers = useRef<Partial<Record<AreaLayerId, string>>>({});
 
   const selected = sites.find((s) => s.id === selectedId) ?? null;
-  const win = windows(range[0], range[1]);
+  const win = exact ? exactWindows(exact) : windows(range[0], range[1]);
   const winKey = JSON.stringify(win);
 
   const loadSites = useCallback(async () => {
@@ -562,10 +564,15 @@ export default function MapApp() {
   }, [drawing]);
 
   // What the map looked like before the tour put its example box down, so closing the tour puts it back.
-  const beforeTour = useRef<{ range: [number, number]; aoi: GeoJSON.Polygon | null; coordText: string } | null>(null);
+  const beforeTour = useRef<{
+    range: [number, number];
+    exact: ExactDates | null;
+    aoi: GeoJSON.Polygon | null;
+    coordText: string;
+  } | null>(null);
 
   function tourExample() {
-    beforeTour.current ??= { range, aoi, coordText };
+    beforeTour.current ??= { range, exact, aoi, coordText };
     showExample();
   }
 
@@ -590,6 +597,7 @@ export default function MapApp() {
     if (before) {
       beforeTour.current = null;
       setRange(before.range);
+      setExact(before.exact);
       setCoordText(before.coordText);
       if (before.aoi) setAoi(before.aoi);
       else clearArea();
@@ -623,6 +631,7 @@ export default function MapApp() {
 
   function showExample() {
     setRange(EXAMPLE.range);
+    setExact(null);
     setCoordText(`${EXAMPLE.lat}, ${EXAMPLE.lon}`);
     goTo(EXAMPLE.lat, EXAMPLE.lon);
   }
@@ -680,7 +689,7 @@ export default function MapApp() {
       setScan(null);
       return setProbeMsg(data.detail ?? "Scan failed.");
     }
-    const period = `${label(range[0])} → ${label(range[1])}`;
+    const period = exact ? `${dayLabel(exact.start)} → ${dayLabel(exact.end)}` : `${label(range[0])} → ${label(range[1])}`;
     setProbeMsg(`Scanning ${period} in Earth Engine… usually under a minute.`);
 
     // The worker runs the scan; poll until it finishes (identical scans reuse the earlier job).
@@ -738,7 +747,19 @@ export default function MapApp() {
       </div>
 
       <div className="pointer-events-none absolute left-[328px] right-4 top-4" data-tour="timebar">
-        <TimeBar start={range[0]} end={range[1]} onChange={(s, e) => setRange([s, e])} />
+        <TimeBar
+          start={exact ? monthOf(exact.start) : range[0]}
+          end={exact ? monthOf(exact.end) : range[1]}
+          onChange={(s, e) => {
+            setExact(null);
+            setRange([s, e]);
+          }}
+          exact={exact}
+          onExact={(dates) => {
+            if (dates) setRange([monthOf(dates.start), monthOf(dates.end)]);
+            setExact(dates);
+          }}
+        />
       </div>
 
       {/* Controls, bottom right: area, layers, key. */}
