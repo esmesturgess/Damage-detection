@@ -40,8 +40,9 @@ def initialize() -> None:
             ee.Initialize(project=settings.gee_project)
         except Exception as exc:
             raise GeeUnavailable(
-                f"Earth Engine login failed for project {settings.gee_project!r}. "
-                f"Run `earthengine authenticate` first. ({exc})"
+                f"Earth Engine login failed for project {settings.gee_project!r}: no service-account key is set "
+                "(GEE_SERVICE_ACCOUNT_JSON) and this machine has no personal login. On a server, add the key as a "
+                "secret file and point GEE_SERVICE_ACCOUNT_JSON at it; on your own computer, run `earthengine authenticate`."
             ) from exc
         return
 
