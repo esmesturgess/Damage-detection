@@ -45,7 +45,7 @@ export function mapTour(showExample: () => void, demo = false): TourStep[] {
           <ul className="list-disc space-y-0.5 pl-5">
             <li>Radar change: Ballinger&apos;s Pixel-Wise T-Test on Sentinel-1, orbits combined by direction</li>
             <li>
-              Burn signal: the difference in Normalised Burn Ratio, from Sentinel-2. It will soon become a more accurate
+              Burn signal: the difference in Normalised Burn Ratio, from Sentinel-2. It is planned to become a more accurate
               measurement, with many factors processed through LightGBM.
             </li>
             <li>Water mask: the Modified Normalised Difference Water Index, from Sentinel-2</li>
@@ -60,7 +60,10 @@ export function mapTour(showExample: () => void, demo = false): TourStep[] {
       title: "Scan for change",
       body: (
         <>
-          <p>Runs the radar test across the box and adds each strong-change hot-spot to the map as an unreviewed dot.</p>
+          <p>
+            Runs the radar test across the box. Each patch of strong change bigger than a few buildings becomes a dot on the
+            map, up to the 50 largest.
+          </p>
           <p>
             Once the box is scanned for these dates, the button under the box becomes Start an investigation: a shared case
             for the area.
@@ -74,17 +77,17 @@ export function mapTour(showExample: () => void, demo = false): TourStep[] {
       body: (
         <>
           <p>
-            Dots fill as people verify them. A ring is a satellite detection nobody has checked yet. Half-filled is
-            corroborated by at least one located and dated source. Solid is verified.
+            An empty ring is a change the satellite found that nobody has looked into yet. A half-filled dot has at least one
+            checked source. A solid dot is verified.
           </p>
-          <p>Untick Show unreviewed to hide detections. Ruled-out sites stay hidden unless you tick Show ruled out. Click any dot to open it.</p>
+          <p>Show unreviewed turns the empty rings on or off. Click any dot to open it.</p>
         </>
       ),
     },
     {
       target: "help",
       title: "Come back any time",
-      body: <p>Help replays this tour. Site and investigation pages have their own tour, which runs the first time you open one.</p>,
+      body: <p>Help replays this tour.</p>,
     },
   ];
 }
