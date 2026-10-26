@@ -23,7 +23,11 @@ export function mapTour(showExample: () => void, demo = false): TourStep[] {
     {
       target: "timebar",
       title: "Choose when",
-      body: <p>Drag the two handles to the period you&apos;re investigating.</p>,
+      body: (
+        <p>
+          Drag the two handles to the period you&apos;re investigating, or press exact dates to type in a start and end day.
+        </p>
+      ),
     },
     {
       target: "area",
