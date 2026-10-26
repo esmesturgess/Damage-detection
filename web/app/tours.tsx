@@ -189,7 +189,7 @@ function siteSteps(kind: string): TourStep[] {
     },
     {
       target: "ladder",
-      title: "What's needed next",
+      title: "Verification level",
       body: <p>The ladder shows how far this {kind} has got, and the line below says exactly what it needs to move up.</p>,
     },
     {
