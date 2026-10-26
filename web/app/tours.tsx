@@ -1,7 +1,7 @@
 import type { TourStep } from "./Tour";
 
 /** The map page. `showExample` puts the Maungdaw example box on the map so the area controls exist. */
-export function mapTour(showExample: () => void): TourStep[] {
+export function mapTour(showExample: () => void, demo = false): TourStep[] {
   return [
     {
       title: "Welcome to Corroborator",
@@ -11,6 +11,11 @@ export function mapTour(showExample: () => void): TourStep[] {
             A shared workspace for finding burned and destroyed settlements in satellite imagery, then building the
             evidence for what happened.
           </p>
+          {demo ? (
+            <p className="font-semibold">
+              This is a demo: anything you add is cleared when the site has been idle for a while.
+            </p>
+          ) : null}
           <p>This tour points out each part of the map. It takes about a minute.</p>
         </>
       ),
@@ -74,7 +79,7 @@ export function mapTour(showExample: () => void): TourStep[] {
             Dots fill as people verify them. A ring is a satellite detection nobody has checked yet. Half-filled is
             corroborated by at least one located and dated source. Solid is verified.
           </p>
-          <p>Untick Unreviewed to hide detections. Ruled-out sites stay hidden unless you tick Ruled out. Click any dot to open it.</p>
+          <p>Untick Show unreviewed to hide detections. Ruled-out sites stay hidden unless you tick Show ruled out. Click any dot to open it.</p>
         </>
       ),
     },

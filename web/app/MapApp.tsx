@@ -17,7 +17,7 @@ import {
   type FilterSpecification,
   type StyleSpecification,
 } from "maplibre-gl";
-import { LEVELS, levelInfo, siteCentre, type Site } from "@/lib/types";
+import { levelInfo, siteCentre, type Site } from "@/lib/types";
 import AreaLayers, { AREA_LAYERS, type AreaLayerId, type Analysis } from "./AreaLayers";
 import SiteOverlay from "./SiteOverlay";
 import PlaceSearch from "./PlaceSearch";
@@ -380,7 +380,6 @@ export default function MapApp() {
     const event = (JSON.parse(winKey) as ReturnType<typeof windows>).event;
     return sites.filter((s) => overlapsWindow(s, event));
   }, [sites, winKey]);
-  const outsideDates = sites.length - shown.length;
   const fc = useMemo(() => toFeatureCollection(shown), [shown]);
   const invFc = useMemo(() => investigationsCollection(shown), [shown]);
 
@@ -782,50 +781,30 @@ export default function MapApp() {
           </div>
         ) : null}
 
-        <div className="p-4 text-[14px]" data-tour="legend">
-          <ul className="mb-2 flex flex-wrap gap-x-3.5 gap-y-1">
-            {LEVELS.filter((l) => l.id !== "ruled_out" && (l.id !== "disputed" || counts.disputed)).map((l) => (
-              <li
-                key={l.id}
-                className={`flex items-center gap-1.5 ${l.id === "detected" && !showDetected ? "faint" : ""}`}
-                title={l.note}
-              >
-                <LevelMark level={l} />
-                {l.label}
-              </li>
-            ))}
-          </ul>
-          <div className="muted flex gap-4 text-[13.5px]">
-            <label className="flex cursor-pointer items-center gap-1.5">
+        <div className="flex items-center gap-4 p-4 text-[14px]" data-tour="legend">
+          <label className="flex cursor-pointer items-center gap-1.5">
+            <input
+              type="checkbox"
+              className="check"
+              checked={showDetected}
+              onChange={(e) => setShowDetected(e.target.checked)}
+            />
+            Show unreviewed
+          </label>
+          {counts.ruled_out ? (
+            <label className="flex cursor-pointer items-center gap-1.5" title={levelInfo("ruled_out").note}>
               <input
                 type="checkbox"
                 className="check"
-                checked={showDetected}
-                onChange={(e) => setShowDetected(e.target.checked)}
+                checked={showRuledOut}
+                onChange={(e) => setShowRuledOut(e.target.checked)}
               />
-              Unreviewed
+              Show ruled out
             </label>
-            {counts.ruled_out ? (
-              <label className="flex cursor-pointer items-center gap-1.5" title={levelInfo("ruled_out").note}>
-                <input
-                  type="checkbox"
-                  className="check"
-                  checked={showRuledOut}
-                  onChange={(e) => setShowRuledOut(e.target.checked)}
-                />
-                Ruled out
-              </label>
-            ) : null}
-          </div>
-          <div className="mt-2 flex items-baseline justify-between gap-3 text-[13.5px]">
-            <span className="faint">
-              {outsideDates ? `${outsideDates} ${outsideDates === 1 ? "site" : "sites"} outside these dates` : null}
-              {demo ? <span className="block">Demo: changes reset after inactivity</span> : null}
-            </span>
-            <button className="link" onClick={() => setTour(selected ? "site" : "map")} data-tour="help">
-              Help
-            </button>
-          </div>
+          ) : null}
+          <button className="link ml-auto" onClick={() => setTour(selected ? "site" : "map")} data-tour="help">
+            Help
+          </button>
         </div>
       </section>
 
@@ -867,22 +846,11 @@ export default function MapApp() {
       {tour ? (
         <Tour
           key={tour}
-          steps={tour === "map" ? mapTour(tourExample) : siteTour(selected?.kind === "investigation")}
+          steps={tour === "map" ? mapTour(tourExample, demo) : siteTour(selected?.kind === "investigation")}
           onClose={closeTour}
         />
       ) : null}
     </div>
-  );
-}
-
-/** A legend swatch drawn like the map mark. Paper outlines take the text colour so they show on the panel. */
-function LevelMark({ level }: { level: (typeof LEVELS)[number] }) {
-  const stroke = level.stroke === "#f4efe6" ? "var(--foreground)" : level.stroke;
-  return (
-    <span
-      className="inline-block h-3 w-3 shrink-0 rounded-full"
-      style={{ background: level.fill, border: `1px solid ${stroke}` }}
-    />
   );
 }
 
