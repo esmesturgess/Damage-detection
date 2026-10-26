@@ -409,10 +409,55 @@ type SiteImages = {
   notes: string[];
 };
 
+/**
+ * Before and after of the same area side by side, uncropped and at the same scale. Pointing at one
+ * marks the same spot on both, so a field or a house can be compared directly.
+ */
+function ComparePair({
+  before,
+  after,
+}: {
+  before: { url: string; window?: { start: string; end: string } };
+  after: { url: string; window?: { start: string; end: string } };
+}) {
+  const [spot, setSpot] = useState<{ x: number; y: number } | null>(null);
+  const track = (e: React.MouseEvent<HTMLElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setSpot({ x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height });
+  };
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {[
+        { label: "Before", ...before },
+        { label: "After", ...after },
+      ].map((img) => (
+        <figure key={img.label} className="m-0">
+          <div className="relative bg-[#2b2a24]" onMouseMove={track} onMouseLeave={() => setSpot(null)}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- Earth Engine thumbnails, not static assets */}
+            <img src={img.url} alt={img.label} className="block h-auto w-full" />
+            {spot ? (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.6)]"
+                style={{ left: `${spot.x * 100}%`, top: `${spot.y * 100}%` }}
+              />
+            ) : null}
+            <span className="absolute left-2 top-2 rounded bg-black/60 px-2 py-0.5 text-[13.5px] text-[#f1e9cf]">{img.label}</span>
+          </div>
+          {img.window ? (
+            <figcaption className="num muted mt-1 text-[13px]">
+              {img.window.start} → {img.window.end}
+            </figcaption>
+          ) : null}
+        </figure>
+      ))}
+    </div>
+  );
+}
+
 function SiteImagery({ siteId }: { siteId: string }) {
   const [state, setState] = useState<{ siteId: string; data?: SiteImages; error?: string } | null>(null);
   const [view, setView] = useState<ImageId | "compare">("after");
-  const [split, setSplit] = useState(50);
 
   useEffect(() => {
     let cancelled = false;
@@ -440,33 +485,15 @@ function SiteImagery({ siteId }: { siteId: string }) {
 
   return (
     <section>
+      {view === "compare" && layers.before && layers.after && !current?.error ? (
+        <ComparePair
+          before={{ url: layers.before.url, window: optical?.before_window }}
+          after={{ url: layers.after.url, window: optical?.after_window }}
+        />
+      ) : (
       <div className="relative aspect-[16/10] max-h-[460px] w-full overflow-hidden bg-[#2b2a24]">
         {current?.error ? (
           <p className="muted absolute inset-0 flex items-center justify-center p-6 text-center">{current.error}</p>
-        ) : view === "compare" && layers.before && layers.after ? (
-          <>
-            {/* eslint-disable @next/next/no-img-element -- Earth Engine thumbnails, not static assets */}
-            <img src={layers.after.url} alt="After" className="absolute inset-0 h-full w-full object-cover" />
-            <img
-              src={layers.before.url}
-              alt="Before"
-              className="absolute inset-0 h-full w-full object-cover"
-              style={{ clipPath: `inset(0 ${100 - split}% 0 0)` }}
-            />
-            {/* eslint-enable @next/next/no-img-element */}
-            <div className="pointer-events-none absolute inset-y-0 w-0.5 bg-white shadow" style={{ left: `${split}%` }} />
-            <span className="absolute left-3 top-3 rounded bg-black/60 px-2 py-0.5 text-[13.5px] text-[#f1e9cf]">Before</span>
-            <span className="absolute right-3 top-3 rounded bg-black/60 px-2 py-0.5 text-[13.5px] text-[#f1e9cf]">After</span>
-            <input
-              aria-label="Compare before and after"
-              type="range"
-              min={0}
-              max={100}
-              value={split}
-              onChange={(e) => setSplit(Number(e.target.value))}
-              className="absolute inset-0 h-full w-full cursor-ew-resize opacity-0"
-            />
-          </>
         ) : view !== "compare" && layers[view] ? (
           // eslint-disable-next-line @next/next/no-img-element -- Earth Engine thumbnails, not static assets
           <img src={layers[view]!.url} alt={view} className="h-full w-full object-cover" />
@@ -482,6 +509,7 @@ function SiteImagery({ siteId }: { siteId: string }) {
           </span>
         ) : null}
       </div>
+      )}
       <div className="mt-3 flex flex-wrap gap-2">
         {[...IMAGES, { id: "compare" as const, label: "Compare" }].map((img) => (
           <button
