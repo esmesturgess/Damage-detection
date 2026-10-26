@@ -98,3 +98,13 @@ def test_public_view_hides_submitter_and_reviewer_only_content(site_id):
     reviewer = list_evidence(site_id, reviewer_view=True)
     assert reviewer[0]["body"] == "I saw it."
     assert "witness-handle" not in repr(reviewer)
+
+
+def test_links_without_a_scheme_get_https(site_id):
+    from core.db import session
+
+    eid = add_evidence(site_id, "link", "amira", url="youtube.com/watch?v=abc")["evidence_id"]
+    with session() as c:
+        assert c.execute("SELECT url FROM evidence WHERE id = ?", (eid,)).fetchone()["url"] == "https://youtube.com/watch?v=abc"
+    with pytest.raises(EvidenceError, match="web address"):
+        add_evidence(site_id, "link", "amira", url="smoke over the ridge")

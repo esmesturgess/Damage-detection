@@ -253,9 +253,16 @@ export default function SiteOverlay({
                   onHandle={onHandle}
                   onCancel={() => setAdding(false)}
                   onSubmit={async (body) => {
-                    const ok = await act(() => post(`/api/sites/${site.id}/evidence`, body), "Evidence added. A colleague will check it.");
-                    if (ok) setAdding(false);
-                    return ok;
+                    try {
+                      await post(`/api/sites/${site.id}/evidence`, body);
+                    } catch (err) {
+                      return (err as Error).message;
+                    }
+                    setMsg("Evidence added.");
+                    setVersion((n) => n + 1);
+                    onChanged();
+                    setAdding(false);
+                    return null;
                   }}
                 />
               ) : null}
@@ -853,10 +860,13 @@ function AddEvidence({
   handle: string;
   onHandle: (h: string) => void;
   onCancel: () => void;
-  onSubmit: (body: { kind: string; url?: string; body?: string; visibility: string; handle: string }) => Promise<boolean>;
+  /** Resolves to null when saved, or to the reason it wasn't. */
+  onSubmit: (body: { kind: string; url?: string; body?: string; visibility: string; handle: string }) => Promise<string | null>;
 }) {
   const [kind, setKind] = useState<"link" | "testimony">("link");
   const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   return (
     <div className="mb-3 space-y-2.5 border border-[var(--line)] p-3">
       <div className="seg">
@@ -893,23 +903,28 @@ function AddEvidence({
       <div className="flex gap-2">
         <button
           className="btn btn-primary flex-1"
-          disabled={!text.trim()}
+          disabled={!text.trim() || busy}
           onClick={async () => {
-            const ok = await onSubmit({
+            setBusy(true);
+            setError("");
+            const problem = await onSubmit({
               kind,
               ...(kind === "link" ? { url: text } : { body: text }),
               visibility: "public",
               handle,
             });
-            if (ok) setText("");
+            setBusy(false);
+            if (problem) setError(problem);
+            else setText("");
           }}
         >
-          Submit
+          {busy ? "Submitting…" : "Submit"}
         </button>
         <button className="btn" onClick={onCancel}>
           Cancel
         </button>
       </div>
+      {error ? <p className="text-[13.5px] font-semibold">{error}</p> : null}
     </div>
   );
 }

@@ -52,8 +52,11 @@ def add_evidence(
         raise EvidenceError(f"visibility must be one of {sorted(VISIBILITY)}")
     url = (url or "").strip() or None
     body = (body or "").strip() or None
+    # Links are often pasted without a scheme ("youtube.com/watch?v=..."): add one if it looks like an address.
+    if kind == "link" and url and not url.startswith(("https://", "http://")) and "." in url and " " not in url:
+        url = "https://" + url
     if kind == "link" and not (url and url.startswith(("https://", "http://"))):
-        raise EvidenceError("a link needs an http(s) URL")
+        raise EvidenceError("That doesn't look like a web address. Paste the full link, e.g. https://…")
     if kind == "testimony" and not body:
         raise EvidenceError("testimony needs text")
     if kind == "prior_report" and not (record and body):
